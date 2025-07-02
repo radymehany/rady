@@ -1,0 +1,697 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام شركة المتوكل على الله لإدارة السيارات</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com/">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; scroll-behavior: smooth; }
+        #app-container {
+            position: relative;
+            z-index: 1;
+            background-color: rgba(248, 250, 252, 0.9);
+        }
+        #app-container::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://j.top4top.io/p_34699hezn1.jpeg');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.1;
+            z-index: -1;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .stat-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+        .modal-content { position: relative; background-color: #fefefe; margin: 5% auto; padding: 2rem; border: 1px solid #888; width: 90%; max-width: 600px; border-radius: 0.5rem; animation: fadeIn 0.3s; }
+        .invoice-modal-content { max-width: 800px; }
+        @keyframes fadeIn { from {opacity: 0; transform: scale(0.95);} to {opacity: 1; transform: scale(1);} }
+        .close-button { color: #aaa; float: left; font-size: 28px; font-weight: bold; }
+        .close-button:hover, .close-button:focus { color: black; text-decoration: none; cursor: pointer; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #2d3748; color: white; padding: 15px; border-radius: 5px; z-index: 100; opacity: 0; transition: all 0.5s; visibility: hidden; }
+        .toast.show { opacity: 1; visibility: visible; }
+        .search-container { position: relative; }
+        .search-icon { position: absolute; top: 50%; right: 1rem; transform: translateY(-50%); color: #9ca3af; }
+        .overdue { background-color: #fee2e2 !important; }
+        .tab-link { transition: all 0.2s ease-in-out; border-bottom: 4px solid transparent; padding-top: 0.75rem; padding-bottom: 0.75rem; }
+        .tab-link:hover { background-color: #f1f5f9; color: #1d4ed8; }
+        .tab-link.active { border-bottom-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }
+        .export-btn-excel { background-color: #166534; } .export-btn-excel:hover { background-color: #14532d; }
+        .print-area { background-color: white; color: black; }
+        
+        #password-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://b.top4top.io/p_3468gmodo1.jpeg');
+            background-size: cover;
+            background-position: center;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #password-overlay::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(17, 24, 39, 0.7);
+            z-index: -1;
+        }
+
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+            .print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                border: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div id="password-overlay">
+        <div class="bg-white p-8 rounded-lg shadow-2xl text-center w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-2 text-gray-800">شركة المتوكل على الله</h2>
+            <p class="text-gray-600 mb-6">الرجاء تسجيل الدخول للوصول إلى النظام</p>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="username-select" class="sr-only">اسم المستخدم</label>
+                    <select id="username-select" class="w-full p-3 border-2 border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="" disabled selected>-- اختر المستخدم --</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="password-input" class="sr-only">كلمة المرور</label>
+                    <input type="password" id="password-input" class="w-full p-3 border-2 border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="كلمة المرور">
+                </div>
+                <p id="password-error" class="text-red-500 text-sm pt-1 hidden">بيانات الدخول غير صحيحة.</p>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 mt-4 rounded-lg hover:bg-blue-700 transition-colors">دخول</button>
+            </form>
+             <p class="text-xs text-gray-400 mt-6">جميع حقوق هذا البرنامج محفوظة © م/راضي مهني دياب 2025</p>
+        </div>
+    </div>
+
+    <div id="app-container" style="display: none;">
+        <header class="bg-white shadow-md sticky top-0 z-40 no-print">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <img src="https://f.top4top.io/p_34699p7z31.png" alt="شعار الشركة" class="h-16">
+                    <div>
+                        <h1 class="text-3xl font-bold text-blue-800">شركة المتوكل على الله للسيارات</h1>
+                        <p class="text-center text-gray-600">إدارة: الحاج السيد زيان شامية وابو زياد</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6">
+                    <div class="text-left">
+                        <p class="text-sm text-gray-700">مرحباً, <strong id="current-user-name" class="text-blue-700"></strong></p>
+                        <p id="live-clock" class="text-xs text-gray-500 mt-1"></p>
+                        <button onclick="logout()" class="mt-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-3 rounded-full shadow">خروج</button>
+                    </div>
+                    <div class="relative">
+                        <button onclick="toggleNotifications()" class="relative text-gray-600 hover:text-blue-700 focus:outline-none">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                            <span id="notification-count" class="absolute top-0 right-0 block h-5 w-5 rounded-full bg-red-600 text-white text-xs flex items-center justify-center" style="display: none;">0</span>
+                        </button>
+                        <div id="notification-dropdown" class="absolute left-0 mt-2 w-80 bg-white rounded-lg shadow-xl overflow-hidden z-50" style="display: none;">
+                            <div class="py-2 px-4 bg-gray-100 font-bold text-gray-800">التنبيهات</div>
+                            <div id="notification-list" class="divide-y max-h-96 overflow-y-auto">
+                                </div>
+                        </div>
+                    </div>
+                    </div>
+            </div>
+            <nav id="main-nav" class="bg-white border-b-2 border-gray-200">
+                <div class="container mx-auto flex justify-center items-center flex-wrap">
+                    <button class="tab-link text-gray-600 px-4 font-semibold" onclick="openTab(event, 'dashboard')" data-tab="dashboard">لوحة التحكم</button>
+                    <button class="tab-link text-gray-600 px-4 font-semibold" onclick="openTab(event, 'inventory')" data-tab="inventory">جرد السيارات</button>
+                    <button class="tab-link text-gray-600 px-4 font-semibold" onclick="openTab(event, 'purchases')" data-tab="purchases">المشتريات</button>
+                    <button class="tab-link text-gray-600 px-4 font-semibold" onclick="openTab(event, 'sales')" data-tab="sales">المبيعات</button>
+                    <button class="tab-link text-gray-600 px-4 font-semibold" onclick="openTab(event, 'installments')" data-tab="installments">الأقساط</button>
+                    <button class="tab-link text-gray-600 px-4 font-semibold" onclick="openTab(event, 'clients')" data-tab="clients">العملاء والموردين</button>
+                    <button class="tab-link text-gray-600 px-4 font-semibold" onclick="openTab(event, 'expenses')" data-tab="expenses">المصروفات</button>
+                    <button class="tab-link text-gray-600 px-4 font-semibold" onclick="openTab(event, 'archive')" data-tab="archive">الأرشيف</button>
+                    <button class="tab-link text-gray-600 px-4 font-semibold" onclick="openTab(event, 'treasury')" data-tab="treasury">الخزنة</button>
+                    <button class="tab-link text-gray-600 px-4 font-semibold" onclick="openTab(event, 'activityLog')" data-tab="activityLog">سجل النشاط</button>
+                    </div>
+            </nav>
+        </header>
+
+        <main class="container mx-auto p-4 md:p-6">
+            <div class="mb-6 search-container no-print">
+                <input type="text" id="globalSearch" placeholder="ابحث في كل النظام..." class="w-full p-3 pr-12 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                <svg class="search-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+            
+            <div id="dashboard" class="tab-content">
+                <h2 class="text-2xl font-bold mb-4 text-gray-700">ملخص الأداء</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="stat-card bg-white p-6 rounded-lg shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-500">قيمة المخزون الحالية</h3>
+                        <p id="db-stock-value" class="text-3xl font-bold text-blue-600 mt-2">0 ج.م.</p>
+                    </div>
+                    <div class="stat-card bg-white p-6 rounded-lg shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-500">إجمالي الأرباح</h3>
+                        <p id="db-total-profits" class="text-3xl font-bold text-green-600 mt-2">0 ج.م.</p>
+                    </div>
+                    <div class="stat-card bg-white p-6 rounded-lg shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-500">رصيد الخزنة الحالي</h3>
+                        <p id="db-balance" class="text-3xl font-bold text-indigo-600 mt-2">0 ج.م.</p>
+                    </div>
+                </div>
+
+                <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-bold mb-4">أقساط مستحقة خلال 7 أيام</h3>
+                        <div id="upcoming-installments" class="space-y-3">
+                            <p class="text-gray-500">لا توجد أقساط مستحقة قريباً.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-bold mb-4">أحدث العمليات</h3>
+                        <div class="space-y-3" id="recent-activities"></div>
+                    </div>
+                </div>
+                
+                <div class="mt-8 grid grid-cols-1">
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-bold mb-4">وصول سريع</h3>
+                        <div class="flex flex-wrap gap-4 justify-center">
+                            <button onclick="openModal('addPurchaseModal')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform">تسجيل سيارة جديدة +</button>
+                            <button onclick="openModal('addSaleModal')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform">تسجيل عملية بيع +</button>
+                            <button onclick="openModal('addExpenseModal')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform">تسجيل مصروف +</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="inventory" class="tab-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-700">جرد السيارات</h2>
+                    <div class="no-print flex-shrink-0">
+                        <button onclick="exportTable('inventory-table', 'تقرير-الجرد')" class="export-btn-excel text-white font-bold py-2 px-4 rounded-lg shadow ml-2">تصدير Excel</button>
+                        <button onclick="printContent('inventory-table-container')" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow ml-2">طباعة</button>
+                    </div>
+                </div>
+                <div id="inventory-table-container" class="bg-white p-4 rounded-lg shadow-md overflow-x-auto print-area">
+                    <h2 class="text-2xl font-bold text-center mb-4 hidden print:block">تقرير جرد السيارات</h2>
+                    <table class="w-full text-center" id="inventory-table">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="p-3">رقم الملف</th><th class="p-3">السيارة</th><th class="p-3">سنة الصنع</th><th class="p-3">رقم الشاسيه</th><th class="p-3">التكلفة الإجمالية</th><th class="p-3">حالة البيع</th><th class="p-3 no-print">إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="purchases" class="tab-content">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
+                    <h2 class="text-2xl font-bold text-gray-700">سجل المشتريات</h2>
+                    <div class="flex items-center gap-4 no-print">
+                        <select id="purchase-year-filter" class="p-2 border rounded-lg bg-white"></select>
+                        <select id="purchase-month-filter" class="p-2 border rounded-lg bg-white"></select>
+                    </div>
+                    <div class="no-print flex-shrink-0">
+                        <button onclick="exportTable('purchases-table', 'تقرير-المشتريات')" class="export-btn-excel text-white font-bold py-2 px-4 rounded-lg shadow ml-2">تصدير Excel</button>
+                        <button onclick="openModal('addPurchaseModal')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow ml-2">+ تسجيل شراء جديد</button>
+                    </div>
+                </div>
+                <div id="purchases-table-container" class="bg-white p-4 rounded-lg shadow-md overflow-x-auto print-area">
+                    <h2 class="text-2xl font-bold text-center mb-4 hidden print:block">تقرير المشتريات</h2>
+                    <table class="w-full text-center" id="purchases-table">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="p-3">التاريخ</th><th class="p-3">السيارة</th><th class="p-3">المورد</th><th class="p-3">سعر الشراء</th><th class="p-3">أضيف بواسطة</th><th class="p-3 no-print">إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="sales" class="tab-content">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
+                    <h2 class="text-2xl font-bold text-gray-700">سجل المبيعات</h2>
+                    <div class="flex items-center gap-4 no-print">
+                        <select id="sale-year-filter" class="p-2 border rounded-lg bg-white"></select>
+                        <select id="sale-month-filter" class="p-2 border rounded-lg bg-white"></select>
+                    </div>
+                    <div class="no-print flex-shrink-0">
+                        <button onclick="exportTable('sales-table', 'تقرير-المبيعات')" class="export-btn-excel text-white font-bold py-2 px-4 rounded-lg shadow ml-2">تصدير Excel</button>
+                        <button onclick="openModal('addSaleModal')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg shadow ml-2">+ تسجيل بيع</button>
+                    </div>
+                </div>
+                <div id="sales-table-container" class="bg-white p-4 rounded-lg shadow-md overflow-x-auto print-area">
+                    <h2 class="text-2xl font-bold text-center mb-4 hidden print:block">تقرير المبيعات</h2>
+                    <table class="w-full text-center" id="sales-table">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="p-3">التاريخ</th><th class="p-3">السيارة</th><th class="p-3">المشتري</th><th class="p-3">سعر البيع</th><th class="p-3">الربح</th><th class="p-3">أضيف بواسطة</th><th class="p-3 no-print">إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="installments" class="tab-content">
+                <h2 class="text-2xl font-bold mb-4 text-gray-700">متابعة الأقساط</h2>
+                <div class="flex justify-between items-start mb-4">
+                    <div class="bg-white p-4 rounded-lg shadow-md flex-grow">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                            <div><h4 class="text-gray-500">إجمالي الأقساط المستحقة</h4><p id="inst-total-due" class="text-2xl font-bold text-red-600">0 ج.م.</p></div>
+                            <div><h4 class="text-gray-500">إجمالي الأقساط المسددة</h4><p id="inst-total-paid" class="text-2xl font-bold text-green-600">0 ج.م.</p></div>
+                            <div><h4 class="text-gray-500">إجمالي المتبقي من الأقساط</h4><p id="inst-total-remaining" class="text-2xl font-bold text-orange-500">0 ج.م.</p></div>
+                        </div>
+                    </div>
+                    <div class="no-print ml-4 flex-shrink-0">
+                        <button onclick="exportTable('installments-table', 'تقرير-الأقساط')" class="export-btn-excel text-white font-bold py-2 px-4 rounded-lg shadow w-full">تصدير Excel</button>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md mb-6 no-print">
+                    <h3 class="text-lg font-bold mb-2">فلترة وعرض الأقساط</h3>
+                    <div class="flex items-end gap-4">
+                        <div class="flex-grow"><label>عرض أقساط العميل</label><select id="inst-customer-filter" class="w-full p-2 border rounded"><option value="all">كل العملاء</option></select></div>
+                        <button id="print-statement-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">طباعة كشف حساب</button>
+                    </div>
+                </div>
+                <div id="installments-table-container" class="bg-white p-4 rounded-lg shadow-md overflow-x-auto print-area">
+                    <h2 class="text-2xl font-bold text-center mb-4 hidden print:block">تقرير الأقساط</h2>
+                    <table class="w-full text-center" id="installments-table">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="p-3">العميل</th><th class="p-3">السيارة</th><th class="p-3">تاريخ الاستحقاق</th><th class="p-3">قيمة القسط</th><th class="p-3">الحالة</th><th class="p-3 no-print">إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="clients" class="tab-content">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-gray-700">العملاء (المشترين)</h2>
+                            <div class="no-print flex-shrink-0">
+                                <button onclick="exportTable('customers-table', 'بيانات-العملاء')" class="export-btn-excel text-white font-bold py-2 px-4 rounded-lg shadow ml-2">Excel</button>
+                                <button onclick="openModal('addClientModal')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow ml-2">+ عميل جديد</button>
+                            </div>
+                        </div>
+                        <div id="customers-table-container" class="bg-white p-4 rounded-lg shadow-md overflow-x-auto print-area">
+                            <h2 class="text-2xl font-bold text-center mb-4 hidden print:block">قائمة العملاء</h2>
+                            <table class="w-full text-center" id="customers-table">
+                                <thead class="bg-gray-200"><tr><th class="p-3">الاسم</th><th class="p-3">الهاتف</th><th class="p-3">العنوان</th><th class="p-3 no-print">إجراءات</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-gray-700">الموردين</h2>
+                            <div class="no-print flex-shrink-0">
+                                <button onclick="exportTable('suppliers-table', 'بيانات-الموردين')" class="export-btn-excel text-white font-bold py-2 px-4 rounded-lg shadow ml-2">Excel</button>
+                                <button onclick="openModal('addSupplierModal')" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow ml-2">+ مورد جديد</button>
+                            </div>
+                        </div>
+                        <div id="suppliers-table-container" class="bg-white p-4 rounded-lg shadow-md overflow-x-auto print-area">
+                            <h2 class="text-2xl font-bold text-center mb-4 hidden print:block">قائمة الموردين</h2>
+                            <table class="w-full text-center" id="suppliers-table">
+                                <thead class="bg-gray-200"><tr><th class="p-3">الاسم</th><th class="p-3">الهاتف</th><th class="p-3">العنوان</th><th class="p-3 no-print">إجراءات</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="expenses" class="tab-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-700">المصروفات</h2>
+                    <div class="no-print flex-shrink-0">
+                        <button onclick="exportTable('expenses-table', 'تقرير-المصروفات')" class="export-btn-excel text-white font-bold py-2 px-4 rounded-lg shadow ml-2">تصدير Excel</button>
+                        <button onclick="openModal('addExpenseModal')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow ml-2">+ تسجيل مصروف</button>
+                    </div>
+                </div>
+                <div id="expenses-table-container" class="bg-white p-4 rounded-lg shadow-md overflow-x-auto print-area">
+                    <h2 class="text-2xl font-bold text-center mb-4 hidden print:block">تقرير المصروفات</h2>
+                    <table class="w-full text-center" id="expenses-table">
+                        <thead class="bg-gray-200"><tr><th class="p-3">التاريخ</th><th class="p-3">البيان</th><th class="p-3">المبلغ</th><th class="p-3">أضيف بواسطة</th><th class="p-3 no-print">إجراءات</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="archive" class="tab-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-700">أرشيف المستندات</h2>
+                    <div class="no-print flex-shrink-0">
+                        <button onclick="openModal('addArchiveModal')" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg shadow ml-2">+ إضافة مستند جديد</button>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md mb-4 no-print">
+                    <h3 class="text-lg font-bold mb-2">تصفية الأرشيف</h3>
+                    <div class="flex items-end gap-4">
+                        <div class="flex-grow">
+                            <label>عرض أرشيف سيارة محددة</label>
+                            <select id="archive-car-filter" class="w-full p-2 border rounded">
+                                <option value="all">عرض كل المستندات</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div id="archive-table-container" class="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
+                    <table class="w-full text-center" id="archive-table">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="p-3">التاريخ</th>
+                                <th class="p-3">عنوان المستند</th>
+                                <th class="p-3">الوصف</th>
+                                <th class="p-3">مرتبط بـ</th>
+                                <th class="p-3">أضيف بواسطة</th>
+                                <th class="p-3 no-print">إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="treasury" class="tab-content">
+                <h2 class="text-2xl font-bold mb-4 text-gray-700">الخزنة</h2>
+                <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <span class="font-semibold text-lg text-green-700">إجمالي المقبوضات (نقدي + مقدمات + أقساط):</span>
+                            <span id="t-total-inflow" class="font-bold text-lg text-green-700">0 ج.م.</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <span class="font-semibold text-lg text-red-700">إجمالي المدفوعات (شراء + مصروفات):</span>
+                            <span id="t-total-outflow" class="font-bold text-lg text-red-700">0 ج.م.</span>
+                        </div>
+                        <div class="flex justify-between items-center bg-gray-100 p-4 rounded-lg mt-4">
+                            <span class="font-bold text-xl text-gray-800">الرصيد الحالي في الخزنة:</span>
+                            <span id="t-balance" class="font-bold text-xl text-gray-800">0 ج.م.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="activityLog" class="tab-content">
+                <h2 class="text-2xl font-bold text-gray-700 mb-4">سجل نشاط المستخدمين</h2>
+                <div class="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
+                    <table class="w-full text-center" id="activity-log-table">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="p-3">التاريخ والوقت</th>
+                                <th class="p-3">المستخدم</th>
+                                <th class="p-3">الإجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="maintenance" class="tab-content">
+                 </div>
+        </main>
+
+        <div id="installment-statement-container" class="hidden print-area"></div>
+
+        <div id="addPurchaseModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('addPurchaseModal')">&times;</span><h3 class="text-xl font-bold mb-4">تسجيل سيارة جديدة</h3><form id="addPurchaseForm" class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block">المورد</label><select id="purchaseSupplier" class="w-full p-2 border rounded" required></select></div><div><label class="block">الحالة</label><select id="purchaseStatus" class="w-full p-2 border rounded"><option value="جديدة">جديدة</option><option value="مستعملة">مستعملة</option></select></div><div><label class="block">النوع (e.g. ايسوزو)</label><input type="text" id="purchaseCarType" class="w-full p-2 border rounded" required></div><div><label class="block">الموديل (e.g. جامبو)</label><input type="text" id="purchaseCarModel" class="w-full p-2 border rounded" required></div><div><label class="block">سنة الصنع</label><input type="number" id="purchaseModelYear" class="w-full p-2 border rounded" required placeholder="YYYY" min="1900" max="2100"></div><div><label class="block">اللون</label><input type="text" id="purchaseColor" class="w-full p-2 border rounded" required></div><div class="md:col-span-2"><label class="block">رقم الشاسيه</label><input type="text" id="purchaseVin" class="w-full p-2 border rounded" required></div><div><label class="block">عداد الكيلومترات</label><input type="number" id="purchaseOdometer" class="w-full p-2 border rounded" required></div><div><label class="block">سعر الشراء</label><input type="number" step="any" id="purchasePrice" class="w-full p-2 border rounded" required></div><div><label class="block">التاريخ</label><input type="date" id="purchaseDate" class="w-full p-2 border rounded" required></div><div class="md:col-span-2"><button type="submit" class="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700">تسجيل الشراء</button></div></form></div></div>
+        <div id="editCarModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('editCarModal')">&times;</span><h3 class="text-xl font-bold mb-4">تعديل بيانات سيارة</h3><form id="editCarForm" class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="hidden" id="editCarId"><div><label class="block">النوع</label><input type="text" id="editCarType" class="w-full p-2 border rounded" required></div><div><label class="block">الموديل</label><input type="text" id="editCarModel" class="w-full p-2 border rounded" required></div><div><label class="block">سنة الصنع</label><input type="number" id="editModelYear" class="w-full p-2 border rounded" required></div><div><label class="block">اللون</label><input type="text" id="editColor" class="w-full p-2 border rounded" required></div><div class="md:col-span-2"><label class="block">رقم الشاسيه</label><input type="text" id="editCarVin" class="w-full p-2 border rounded" required></div><div><label class="block">سعر الشراء</label><input type="number" step="any" id="editCarPurchasePrice" class="w-full p-2 border rounded" required></div><div><label class="block">مصاريف صيانة</label><input type="number" step="any" id="editCarMaintenanceCost" class="w-full p-2 border rounded" required></div><div class="md:col-span-2"><button type="submit" class="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700">حفظ التعديلات</button></div></form></div></div>
+        <div id="carDetailsModal" class="modal"><div class="modal-content max-w-2xl"><span class="close-button" onclick="closeModal('carDetailsModal')">&times;</span><div id="carDetailsContent" class="print-area"></div><div class="text-center mt-6 no-print"><button onclick="printContent('carDetailsContent')" class="bg-blue-600 text-white font-bold py-2 px-8 rounded-lg hover:bg-blue-700">طباعة</button></div></div></div>
+        <div id="addSaleModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('addSaleModal')">&times;</span><h3 class="text-xl font-bold mb-4">تسجيل عملية بيع</h3><form id="addSaleForm" class="space-y-4"><div><label class="block">السيارة</label><select id="saleCarId" class="w-full p-2 border rounded" required></select></div><div><label class="block">العميل</label><select id="saleCustomerId" class="w-full p-2 border rounded" required></select></div><div><label class="block">سعر البيع</label><input type="number" step="any" id="salePrice" class="w-full p-2 border rounded" required></div><div><label class="block">عداد الكيلومترات عند البيع</label><input type="number" id="saleOdometer" class="w-full p-2 border rounded" required></div><div><label class="block">نوع السداد</label><select id="saleType" class="w-full p-2 border rounded"><option value="نقدي">نقدي</option><option value="تقسيط">تقسيط</option></select></div><div id="installment-fields" class="hidden space-y-4"><div><label class="block">المقدم</label><input type="number" step="any" id="saleDownPayment" class="w-full p-2 border rounded" value="0"></div><div><label class="block">عدد الأقساط</label><input type="number" id="saleInstallmentCount" class="w-full p-2 border rounded" value="12"></div></div><div><label class="block">تاريخ البيع</label><input type="date" id="saleDate" class="w-full p-2 border rounded" required></div><button type="submit" class="w-full bg-emerald-600 text-white p-3 rounded hover:bg-emerald-700">تسجيل البيع</button></form></div></div>
+        <div id="addExpenseModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('addExpenseModal')">&times;</span><h3 class="text-xl font-bold mb-4">تسجيل مصروف</h3><form id="addExpenseForm" class="space-y-4"><div><label class="block">بيان المصروف</label><input type="text" id="expenseDescription" class="w-full p-2 border rounded" required></div><div><label class="block">نوع المصروف</label><select id="expenseType" class="w-full p-2 border rounded"><option value="عامة">عامة</option><option value="صيانة">صيانة</option></select></div><div id="expense-car-link" class="hidden"><label class="block">ربط بسيارة</label><select id="expenseCarId" class="w-full p-2 border rounded"></select></div><div><label class="block">المبلغ</label><input type="number" step="any" id="expenseAmount" class="w-full p-2 border rounded" required></div><div><label class="block">التاريخ</label><input type="date" id="expenseDate" class="w-full p-2 border rounded" required></div><button type="submit" class="w-full bg-red-600 text-white p-3 rounded hover:bg-red-700">تسجيل المصروف</button></form></div></div>
+        <div id="addClientModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('addClientModal')">&times;</span><h3 class="text-xl font-bold mb-4">إضافة عميل جديد</h3><form id="addClientForm" class="space-y-4"><div><label>الاسم</label><input id="clientName" class="w-full p-2 border rounded" required></div><div><label>الهاتف</label><input id="clientPhone" class="w-full p-2 border rounded"></div><div><label>العنوان</label><input id="clientAddress" class="w-full p-2 border rounded"></div><button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded hover:bg-indigo-700">إضافة</button></form></div></div>
+        <div id="addSupplierModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('addSupplierModal')">&times;</span><h3 class="text-xl font-bold mb-4">إضافة مورد جديد</h3><form id="addSupplierForm" class="space-y-4"><div><label>الاسم</label><input id="supplierName" class="w-full p-2 border rounded" required></div><div><label>الهاتف</label><input id="supplierPhone" class="w-full p-2 border rounded"></div><div><label>العنوان</label><input id="supplierAddress" class="w-full p-2 border rounded"></div><button type="submit" class="w-full bg-purple-600 text-white p-3 rounded hover:bg-purple-700">إضافة</button></form></div></div>
+        <div id="editPersonModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('editPersonModal')">&times;</span><h3 id="editPersonTitle" class="text-xl font-bold mb-4"></h3><form id="editPersonForm" class="space-y-4"><input type="hidden" id="editPersonId"><input type="hidden" id="editPersonType"><div><label>الاسم</label><input id="editPersonName" class="w-full p-2 border rounded" required></div><div><label>الهاتف</label><input id="editPersonPhone" class="w-full p-2 border rounded"></div><div><label>العنوان</label><input id="editPersonAddress" class="w-full p-2 border rounded"></div><button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded hover:bg-indigo-700">حفظ التعديلات</button></form></div></div>
+        <div id="editExpenseModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('editExpenseModal')">&times;</span><h3 class="text-xl font-bold mb-4">تعديل مصروف</h3><form id="editExpenseForm" class="space-y-4"><input type="hidden" id="editExpenseId"><div><label>البيان</label><input id="editExpenseDescription" class="w-full p-2 border rounded" required></div><div><label>المبلغ</label><input type="number" step="any" id="editExpenseAmount" class="w-full p-2 border rounded" required></div><button type="submit" class="w-full bg-red-600 text-white p-3 rounded hover:bg-red-700">حفظ التعديلات</button></form></div></div>
+        <div id="addArchiveModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('addArchiveModal')">&times;</span><h3 class="text-xl font-bold mb-4">إضافة مستند للأرشيف</h3><form id="addArchiveForm" class="space-y-4"><div><label class="block">عنوان المستند</label><input type="text" id="archiveTitle" class="w-full p-2 border rounded" required></div><div><label class="block">وصف قصير</label><textarea id="archiveDescription" class="w-full p-2 border rounded"></textarea></div><div><label class="block">رابط المستند (Image/PDF Link)</label><input type="url" id="archiveLink" placeholder="https://example.com/image.jpg" class="w-full p-2 border rounded" required></div><div><label class="block">ربط بسيارة (اختياري)</label><select id="archiveCarId" class="w-full p-2 border rounded"></select></div><div><label class="block">التاريخ</label><input type="date" id="archiveDate" class="w-full p-2 border rounded" required></div><button type="submit" class="w-full bg-teal-600 text-white p-3 rounded hover:bg-teal-700">حفظ في الأرشيف</button></form></div></div>
+        <div id="confirmModal" class="modal"><div class="modal-content max-w-sm"><h3 class="text-xl font-bold mb-4">تأكيد الإجراء</h3><p id="confirmMessage" class="mb-6"></p><div class="flex justify-end gap-4"><button id="confirmCancelBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-6 rounded">إلغاء</button><button id="confirmOkBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded">تأكيد</button></div></div></div>
+        <div id="invoiceModal" class="modal"><div class="modal-content invoice-modal-content"><span class="close-button" onclick="closeModal('invoiceModal')">&times;</span><div id="invoiceContent" class="invoice-print-area"></div><div class="text-center mt-6 no-print"><button onclick="printContent('invoiceContent')" class="bg-blue-600 text-white font-bold py-2 px-8 rounded-lg hover:bg-blue-700">طباعة</button></div></div></div>
+        
+        <div id="statementModal" class="modal">
+            <div class="modal-content invoice-modal-content">
+                <span class="close-button" onclick="closeModal('statementModal')">&times;</span>
+                <div id="statementContent" class="print-area">
+                    </div>
+                <div class="text-center mt-6 no-print">
+                    <button onclick="printContent('statementContent')" class="bg-blue-600 text-white font-bold py-2 px-8 rounded-lg hover:bg-blue-700">طباعة الكشف</button>
+                </div>
+            </div>
+        </div>
+        <div id="toast-notification" class="toast"></div>
+        
+        <footer class="text-center p-4 mt-8 text-gray-500 no-print">
+            <p>اهداء من م/راضي مهني دياب © 2025</p>
+            <p>فضلا وليس امرا نرجو الدعاء لوالدي المرحوم مهني دياب</p>
+            <div class="flex justify-center gap-4 flex-wrap">
+                <button onclick="backupData()" class="mt-4 bg-green-700 hover:bg-green-800 text-white font-bold py-2 px-4 rounded-lg shadow">تنزيل نسخة احتياطية</button>
+                <button onclick="document.getElementById('restore-input').click()" class="mt-4 bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg shadow">استعادة نسخة احتياطية</button>
+                <input type="file" id="restore-input" class="hidden" accept=".json" onchange="restoreData(event)">
+                <button onclick="resetSystem()" class="mt-4 bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-lg shadow">إعادة ضبط النظام (حذف كل البيانات)</button>
+            </div>
+        </footer>
+    </div>
+    
+    <div id="youtube-player" style="position: absolute; top: -9999px; left: -9999px;"></div>
+    <script>
+        // --- Database Initialization ---
+        let db = { cars: [], sales: [], installments: [], expenses: [], customers: [], suppliers: [], archive: [], activityLog: [], invoiceCounter: 1, carFileCounter: 1, maintenanceAlerts: [] };
+        const DB_KEY = 'mutawakelCarSystemDB_v16_full_features'; // Version updated for new features
+        let currentUser = null;
+
+        // --- User permissions ---
+        const users = [
+            { username: 'admin', password: '000', name: 'المدير العام', permissions: ['all'] },
+            { username: 'mahmoud', password: '111', name: 'محمود السيد', permissions: ['expenses', 'clients'] },
+            { username: 'abogeny', password: '222', name: 'ابو جني', permissions: ['sales', 'installments', 'clients'] },
+            { username: 'abozeyad', password: '333', name: 'ابو زياد', permissions: ['purchases', 'inventory', 'clients'] },
+            { username: 'accountant', password: '444', name: 'المحاسب', permissions: ['purchases', 'sales', 'expenses', 'installments', 'treasury', 'clients', 'activityLog'] }
+        ];
+
+        function saveData() { try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch (e) { console.error("Error saving data:", e); showToast("خطأ: لا يمكن حفظ البيانات."); } }
+        function loadData() { const savedData = localStorage.getItem(DB_KEY); if (savedData) { db = JSON.parse(savedData); if(!db.invoiceCounter) db.invoiceCounter = 1; if(!db.carFileCounter) db.carFileCounter = 1; if(!db.archive) db.archive = []; if(!db.maintenanceAlerts) db.maintenanceAlerts = []; if(!db.activityLog) db.activityLog = []; } }
+        function resetSystem() { openConfirmModal("هل أنت متأكد من رغبتك في حذف جميع البيانات بشكل نهائي؟ هذا الإجراء لا يمكن التراجع عنه.", () => { localStorage.removeItem(DB_KEY); location.reload(true); }); }
+        function logout() { openConfirmModal("تصحبكم السلامة، هل أنت متأكد من رغبتك في الخروج؟\nاهداء من م/راضي مهني دياب", () => { location.reload(true); }); }
+        
+        function applyPermissions() {
+            if (!currentUser || currentUser.permissions.includes('all')) {
+                return; // Show all tabs if admin or no user
+            }
+            const navLinks = document.querySelectorAll('#main-nav .tab-link');
+            const allowedTabs = new Set(['dashboard', ...currentUser.permissions]);
+            navLinks.forEach(link => {
+                const tabName = link.dataset.tab;
+                if (allowedTabs.has(tabName)) {
+                    link.style.display = '';
+                } else {
+                    link.style.display = 'none';
+                }
+            });
+        }
+
+        // --- Backup and Restore Functionality ---
+        function backupData() { try { const dataStr = JSON.stringify(db); const dataBlob = new Blob([dataStr], {type: "application/json"}); const url = URL.createObjectURL(dataBlob); const link = document.createElement('a'); link.href = url; const date = new Date().toISOString().slice(0, 10); link.download = `mutawakel-backup-${date}.json`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); showToast("تم تنزيل النسخة الاحتياطية بنجاح."); } catch (e) { console.error("Backup failed:", e); showToast("فشل إنشاء النسخة الاحتياطية."); } }
+        function restoreData(event) { const file = event.target.files[0]; if (!file) return; openConfirmModal(`هل أنت متأكد من استعادة البيانات من الملف؟ سيتم الكتابة فوق جميع البيانات الحالية.`, () => { const reader = new FileReader(); reader.onload = function(e) { try { const restoredDb = JSON.parse(e.target.result); if (restoredDb && typeof restoredDb.cars !== 'undefined' && typeof restoredDb.sales !== 'undefined') { db = restoredDb; saveData(); showToast("تم استعادة البيانات بنجاح! سيتم إعادة تحميل الصفحة."); setTimeout(() => location.reload(true), 1500); } else { showToast("ملف غير صالح أو تالف."); } } catch (err) { console.error("Restore failed:", err); showToast("خطأ في قراءة الملف. تأكد من أنه ملف نسخة احتياطية صالح."); } }; reader.readAsText(file); event.target.value = null; }); }
+        function exportTable(tableId, fileName) { const table = document.getElementById(tableId); if (!table) { console.error("Table not found!"); return; } const tableClone = table.cloneNode(true); const noPrintHeaders = Array.from(tableClone.querySelectorAll('th.no-print')); const indicesToRemove = noPrintHeaders.map(th => Array.from(th.parentNode.children).indexOf(th)); Array.from(tableClone.rows).forEach(row => { indicesToRemove.sort((a, b) => b - a).forEach(index => { if(row.cells[index]) row.deleteCell(index); }); }); const wb = XLSX.utils.table_to_book(tableClone, { sheet: "Sheet1" }); XLSX.writeFile(wb, `${fileName}.xlsx`); }
+        
+        // --- UI Helpers ---
+        const formatCurrency = (num) => new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' }).format(num || 0);
+        const getTodayDate = () => new Date().toISOString().slice(0, 10);
+        const showToast = (message) => { const toast = document.getElementById('toast-notification'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); }, 3000); };
+        const openTab = (evt, tabName) => { document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none'); document.querySelectorAll('.tab-link').forEach(tl => tl.classList.remove('active')); document.getElementById(tabName).style.display = 'block'; evt.currentTarget.classList.add('active'); };
+        const openModal = (modalId) => { 
+            if (modalId === 'addPurchaseModal') populateSelect('purchaseSupplier', db.suppliers); 
+            if (modalId === 'addSaleModal') { populateSelect('saleCarId', db.cars.filter(c => !c.isSold)); populateSelect('saleCustomerId', db.customers); } 
+            if (modalId === 'addExpenseModal') populateSelect('expenseCarId', db.cars, true); 
+            if (modalId === 'addArchiveModal') populateSelect('archiveCarId', db.cars, true);
+            document.querySelectorAll('input[type="date"]').forEach(el => { if (!el.value) el.value = getTodayDate(); }); 
+            document.getElementById(modalId).style.display = "block"; 
+        };
+        const closeModal = (modalId) => { document.getElementById(modalId).style.display = "none"; };
+        const populateSelect = (selectId, data, optional = false) => { const select = document.getElementById(selectId); select.innerHTML = optional ? '<option value="">-- مستند عام --</option>' : '<option value="" disabled selected>-- اختر --</option>'; data.forEach(item => { let name = item.carType ? `${item.carType} ${item.carModel} ${item.modelYear}` : item.name; select.innerHTML += `<option value="${item.id}">${name}</option>`; }); };
+        const openConfirmModal = (message, onConfirm) => { document.getElementById('confirmMessage').textContent = message; const confirmBtn = document.getElementById('confirmOkBtn'), cancelBtn = document.getElementById('confirmCancelBtn'), modal = document.getElementById('confirmModal'); const confirmHandler = () => { onConfirm(); closeConfirmModal(); }; const closeConfirmModal = () => { modal.style.display = 'none'; confirmBtn.removeEventListener('click', confirmHandler); cancelBtn.removeEventListener('click', closeConfirmModal); }; confirmBtn.addEventListener('click', confirmHandler); cancelBtn.addEventListener('click', closeConfirmModal); modal.style.display = 'block'; };
+        const printContent = (elementId) => { const nodeToPrint = document.getElementById(elementId); if (!nodeToPrint) { console.error('Element to print not found:', elementId); return; } const iframe = document.createElement('iframe'); iframe.style.visibility = 'hidden'; iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; document.body.appendChild(iframe); const doc = iframe.contentWindow.document; doc.open(); doc.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><title>${document.title}</title></head><body></body></html>`); document.head.querySelectorAll('link[rel="stylesheet"], style').forEach(node => { doc.head.appendChild(node.cloneNode(true)); }); iframe.onload = () => { doc.body.innerHTML = nodeToPrint.innerHTML; setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); document.body.removeChild(iframe); }, 500); }; doc.close(); };
+
+        // --- START: New Feature Functions ---
+        function logActivity(description) { if (!db.activityLog) db.activityLog = []; db.activityLog.push({ timestamp: new Date().toLocaleString('ar-EG'), user: currentUser.name, description: description }); }
+        function toggleNotifications() { const dropdown = document.getElementById('notification-dropdown'); dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none'; }
+        // --- END: New Feature Functions ---
+
+        // --- Core Rendering ---
+        const renderAll = (searchTerm = '') => { 
+            const purchaseYear = document.getElementById('purchase-year-filter').value;
+            const purchaseMonth = document.getElementById('purchase-month-filter').value;
+            const saleYear = document.getElementById('sale-year-filter').value;
+            const saleMonth = document.getElementById('sale-month-filter').value;
+            const installmentCustomer = document.getElementById('inst-customer-filter').value;
+            const archiveCarFilter = document.getElementById('archive-car-filter').value;
+            renderCars(searchTerm); 
+            renderPurchases(searchTerm, purchaseYear, purchaseMonth); 
+            renderSales(searchTerm, saleYear, saleMonth); 
+            renderInstallments(searchTerm, installmentCustomer); 
+            renderClients(searchTerm); 
+            renderExpenses(searchTerm); 
+            renderArchive(searchTerm, archiveCarFilter);
+            updateSummary(); 
+            renderRecentActivities(); 
+            populateInstallmentCustomerFilter(); 
+            populateArchiveCarFilter();
+            renderUpcomingInstallments();
+            renderNotifications();
+            renderActivityLog();
+        };
+
+        const ICONS = {
+            edit: `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"></path><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd"></path></svg>`,
+            delete: `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>`,
+            details: `<svg class="w-5 h-5 text-gray-500 hover:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>`,
+            invoice: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>`,
+            receipt: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>`,
+            view: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>`,
+            whatsapp: `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.487 5.235 3.487 8.413 0 6.557-5.338 11.892-11.894 11.892-1.99 0-3.903-.52-5.687-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.886-.001 2.267.655 4.398 1.803 6.12l-1.215 4.433 4.515-1.182z"></path></svg>`
+        };
+
+        const renderCars = (filter) => { const tbody = document.querySelector("#inventory-table tbody"); tbody.innerHTML = ""; db.cars.filter(c => `${c.carType} ${c.carModel}`.toLowerCase().includes(filter) || c.vin.toLowerCase().includes(filter)).sort((a,b) => b.id - a.id).forEach(car => { const totalCost = car.purchasePrice + car.maintenanceCost; const carName = `${car.carType} ${car.carModel}`; tbody.innerHTML += `<tr class="border-b hover:bg-gray-50 ${car.isSold ? 'opacity-60' : ''}"><td class="p-3 font-bold text-blue-600">#${car.fileNumber}</td><td class="p-3 font-semibold">${carName}</td><td class="p-3">${car.modelYear}</td><td class="p-3">${car.vin}</td><td class="p-3 font-bold">${formatCurrency(totalCost)}</td><td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-semibold ${car.isSold ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}">${car.isSold ? 'تم البيع' : 'متاحة'}</span></td><td class="p-3 no-print"><div class="flex justify-center items-center gap-4"><button onclick="openCarDetailsModal(${car.id})" title="ملف السيارة">${ICONS.details}</button><button onclick="openEditCarModal(${car.id})" title="تعديل" class="text-blue-600">${ICONS.edit}</button><button onclick="deleteCar(${car.id})" title="حذف" class="text-red-600">${ICONS.delete}</button></div></td></tr>`; }); };
+        const renderPurchases = (filter, year, month) => { const tbody = document.querySelector("#purchases-table tbody"); tbody.innerHTML = ""; db.cars.filter(car => { const supplier = db.suppliers.find(s=>s.id === car.supplierId); const searchMatch = `${car.carType} ${car.carModel}`.toLowerCase().includes(filter) || (supplier?.name.toLowerCase() || '').includes(filter); const yearMatch = year === 'all' || car.date.startsWith(year); const monthMatch = month === 'all' || new Date(car.date).getMonth() + 1 == month; return searchMatch && yearMatch && monthMatch; }).sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(car => { const carName = `${car.carType} ${car.carModel} ${car.modelYear}`; const supplier = db.suppliers.find(s => s.id === car.supplierId); tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-3">${car.date}</td><td class="p-3">${carName}</td><td class="p-3">${supplier?.name || ''}</td><td class="p-3 font-bold">${formatCurrency(car.purchasePrice)}</td><td class="p-3 text-xs text-gray-500">${car.createdBy || ''}</td><td class="p-3 no-print"><div class="flex justify-center items-center gap-4"><button onclick="showInvoice('purchase', ${car.id})" title="طباعة فاتورة الشراء" class="text-emerald-600">${ICONS.invoice}</button><button onclick="openCarDetailsModal(${car.id})" title="ملف السيارة">${ICONS.details}</button></div></td></tr>`; }); };
+        const renderSales = (filter, year, month) => { const tbody = document.querySelector("#sales-table tbody"); tbody.innerHTML = ""; db.sales.filter(sale => { const car = db.cars.find(c => c.id === sale.carId); const customer = db.customers.find(c => c.id === sale.customerId); const searchMatch = (car && `${car.carType} ${car.carModel}`.toLowerCase().includes(filter)) || (customer && customer.name.toLowerCase().includes(filter)); const yearMatch = year === 'all' || sale.date.startsWith(year); const monthMatch = month === 'all' || new Date(sale.date).getMonth() + 1 == month; return searchMatch && yearMatch && monthMatch; }).sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(sale => { const car = db.cars.find(c => c.id === sale.carId); const customer = db.customers.find(c => c.id === sale.customerId); const totalCost = car ? car.purchasePrice + car.maintenanceCost : 0; const profit = sale.salePrice - totalCost; const carName = car ? `${car.carType} ${car.carModel} ${car.modelYear}` : 'محذوف'; tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-3">${sale.date}</td><td class="p-3">${carName}</td><td class="p-3">${customer?.name || 'محذوف'}</td><td class="p-3 font-bold">${formatCurrency(sale.salePrice)}</td><td class="p-3 font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${formatCurrency(profit)}</td><td class="p-3 text-xs text-gray-500">${sale.createdBy || ''}</td><td class="p-3 no-print"><div class="flex justify-center items-center gap-3"><button onclick="showInvoice('sale', ${sale.id})" title="طباعة فاتورة البيع" class="text-emerald-600">${ICONS.invoice}</button><button onclick="deleteSale(${sale.id})" title="حذف" class="text-red-600">${ICONS.delete}</button></div></td></tr>`; }); };
+        const renderInstallments = (filter, customerFilterId) => { const tbody = document.querySelector("#installments-table tbody"); tbody.innerHTML = ""; const today = new Date(); today.setHours(0,0,0,0); const searchFilter = filter.toLowerCase(); db.installments.filter(inst => { const sale = db.sales.find(s => s.id === inst.saleId); if (!sale) return false; const customerMatch = (customerFilterId === 'all' || sale.customerId == customerFilterId); if (!customerMatch) return false; if (searchFilter) { const car = db.cars.find(c => c.id === sale.carId); const customer = db.customers.find(c => c.id === sale.customerId); const searchTermMatch = (car && `${car.carType} ${car.carModel}`.toLowerCase().includes(searchFilter)) || (customer && customer.name.toLowerCase().includes(searchFilter)); return searchTermMatch; } return true; }).sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)).forEach(inst => { const sale = db.sales.find(s => s.id === inst.saleId); const car = db.cars.find(c => c.id === sale.carId); const customer = db.customers.find(c => c.id === sale.customerId); const dueDate = new Date(inst.dueDate); const isOverdue = dueDate < today && !inst.paid; const carName = car ? `${car.carType} ${car.carModel}` : 'محذوف'; let actionButton = ''; if (inst.paid) { actionButton = `<button onclick="showInvoice('installment', ${inst.id})" title="طباعة إيصال" class="text-indigo-600 flex items-center gap-1">${ICONS.receipt} طباعة</button>`; } else { const totalLoanAmount = sale.salePrice - sale.downPayment; const allInstallmentsForSale = db.installments.filter(i => i.saleId === inst.saleId); const totalPaidForSale = allInstallmentsForSale.filter(i => i.paid).reduce((sum, i) => sum + i.amount, 0); const remainingBalanceForSale = totalLoanAmount - totalPaidForSale; const whatsappMessage = `مرحباً ${customer?.name}،\nنود تذكيركم بموعد استحقاق قسط سيارة ${carName} بقيمة ${formatCurrency(inst.amount)} بتاريخ ${inst.dueDate}.\n\nالمبلغ المتبقي عليكم لهذه السيارة هو ${formatCurrency(remainingBalanceForSale)}.\nشكراً لتعاونكم.`; const whatsappLink = `https://wa.me/2${customer?.phone}?text=${encodeURIComponent(whatsappMessage)}`; actionButton = `<div class="flex items-center justify-center gap-2"><button onclick="payInstallment(${inst.id})" class="bg-emerald-500 text-white px-3 py-1 rounded text-sm hover:bg-emerald-600">تسديد</button><a href="${whatsappLink}" target="_blank" title="إرسال تذكير واتساب" class="text-green-500 hover:text-green-700">${ICONS.whatsapp}</a></div>`; } tbody.innerHTML += `<tr class="border-b hover:bg-gray-50 ${inst.paid ? 'bg-green-50 opacity-60' : ''} ${isOverdue ? 'overdue' : ''}"><td class="p-3">${customer?.name || ''}</td><td class="p-3">${carName}</td><td class="p-3">${inst.dueDate}</td><td class="p-3 font-bold">${formatCurrency(inst.amount)}</td><td class="p-3 font-semibold ${inst.paid ? 'text-green-600' : isOverdue ? 'text-red-700' : 'text-orange-500'}">${inst.paid ? 'تم السداد' : (isOverdue ? 'متأخر' : 'لم يسدد')}</td><td class="p-3 no-print">${actionButton}</td></tr>`; }); const totalDue = db.installments.reduce((sum, i) => sum + i.amount, 0); const totalPaid = db.installments.filter(i => i.paid).reduce((sum, i) => sum + i.amount, 0); document.getElementById('inst-total-due').textContent = formatCurrency(totalDue); document.getElementById('inst-total-paid').textContent = formatCurrency(totalPaid); document.getElementById('inst-total-remaining').textContent = formatCurrency(totalDue - totalPaid); };
+        
+        // --- START: MODIFIED renderClients ---
+        const renderClients = (filter) => { const renderPersonTable = (type, tableId) => { const tbody = document.querySelector(`#${tableId} tbody`); tbody.innerHTML = ""; db[type].filter(p => p.name.toLowerCase().includes(filter) || (p.phone && p.phone.includes(filter))).forEach(p => { tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-3">${p.name}</td><td class="p-3">${p.phone || ''}</td><td class="p-3">${p.address || ''}</td><td class="p-3 no-print"><div class="flex justify-center items-center gap-3"><button onclick="showPersonStatement(${p.id}, '${type}')" title="كشف حساب" class="text-green-600">${ICONS.invoice}</button><button onclick="openEditPersonModal(${p.id}, '${type}')" title="تعديل" class="text-blue-600">${ICONS.edit}</button><button onclick="deletePerson(${p.id}, '${type}')" title="حذف" class="text-red-600">${ICONS.delete}</button></div></td></tr>`; }); }; renderPersonTable('customers', 'customers-table'); renderPersonTable('suppliers', 'suppliers-table'); };
+        // --- END: MODIFIED renderClients ---
+
+        const renderExpenses = (filter) => { const tbody = document.querySelector("#expenses-table tbody"); tbody.innerHTML = ""; db.expenses.filter(e => e.description.toLowerCase().includes(filter)).sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(exp => { tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-3">${exp.date}</td><td class="p-3">${exp.description}</td><td class="p-3 text-red-600 font-semibold">${formatCurrency(exp.amount)}</td><td class="p-3 text-xs text-gray-500">${exp.createdBy || ''}</td><td class="p-3 no-print"><div class="flex justify-center items-center gap-3">${exp.type === 'صيانة' && exp.carId ? `<button onclick="showInvoice('maintenance', ${exp.id})" title="طباعة فاتورة صيانة" class="text-orange-600">${ICONS.invoice}</button>` : ''}<button onclick="openEditExpenseModal(${exp.id})" title="تعديل" class="text-blue-600">${ICONS.edit}</button><button onclick="deleteExpense(${exp.id})" title="حذف" class="text-red-600">${ICONS.delete}</button></div></td></tr>`; }); };
+        const renderArchive = (filter, carFilterId) => { const tbody = document.querySelector("#archive-table tbody"); tbody.innerHTML = ""; const searchFilter = filter.toLowerCase(); db.archive.filter(item => { const carMatch = (carFilterId === 'all' || item.carId == carFilterId); if (!carMatch) return false; const searchMatch = item.title.toLowerCase().includes(searchFilter) || item.description.toLowerCase().includes(searchFilter); return searchMatch; }).sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(item => { let linkedCarName = 'مستند عام'; if (item.carId) { const car = db.cars.find(c => c.id === item.carId); if (car) { linkedCarName = `${car.carType} ${car.carModel}`; } else { linkedCarName = 'سيارة محذوفة'; } } tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-3">${item.date}</td><td class="p-3 font-semibold">${item.title}</td><td class="p-3 text-gray-600">${item.description}</td><td class="p-3 text-blue-700">${linkedCarName}</td><td class="p-3 text-xs text-gray-500">${item.createdBy || ''}</td><td class="p-3 no-print"><div class="flex justify-center items-center gap-4"><a href="${item.link}" target="_blank" title="عرض المستند" class="text-blue-600 hover:text-blue-800">${ICONS.view}</a><button onclick="deleteArchiveItem(${item.id})" title="حذف" class="text-red-600">${ICONS.delete}</button></div></td></tr>`; }); };
+        const renderRecentActivities = () => { const container = document.getElementById('recent-activities'); container.innerHTML = ""; const activities = [...db.sales.map(s => ({ ...s, type: 'sale' })), ...db.cars.map(p => ({ ...p, type: 'purchase' }))].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 4); activities.forEach(act => { let html = ''; if (act.type === 'sale') { const car = db.cars.find(c => c.id === act.carId); const carName = car ? `${car.carType} ${car.carModel}` : ''; html = `<div class="flex items-center gap-4"><div class="w-10 h-10 bg-emerald-100 text-emerald-600 flex items-center justify-center rounded-full font-bold">بيع</div><div><p>بيع سيارة <strong>${carName}</strong> بسعر ${formatCurrency(act.salePrice)}</p><p class="text-sm text-gray-500">${act.date}</p></div></div>`; } else { const carName = `${act.carType} ${act.carModel}`; html = `<div class="flex items-center gap-4"><div class="w-10 h-10 bg-blue-100 text-blue-600 flex items-center justify-center rounded-full font-bold">شراء</div><div><p>شراء سيارة <strong>${carName}</strong> بسعر ${formatCurrency(act.purchasePrice)}</p><p class="text-sm text-gray-500">${act.date}</p></div></div>`; } container.innerHTML += html; }); };
+        const updateSummary = () => { const stockValue = db.cars.filter(c => !c.isSold).reduce((sum, car) => sum + car.purchasePrice + car.maintenanceCost, 0); let totalProfits = 0; db.sales.forEach(sale => { const car = db.cars.find(c => c.id === sale.carId); const cost = car ? car.purchasePrice + car.maintenanceCost : 0; totalProfits += sale.salePrice - cost; }); const cashSalesInflow = db.sales.filter(s => s.saleType === 'نقدي').reduce((sum, s) => sum + s.salePrice, 0); const installmentDownPaymentsInflow = db.sales.filter(s => s.saleType === 'تقسيط').reduce((sum, s) => sum + s.downPayment, 0); const paidInstallmentsInflow = db.installments.filter(i => i.paid).reduce((sum, i) => sum + i.amount, 0); const totalInflow = cashSalesInflow + installmentDownPaymentsInflow + paidInstallmentsInflow; const carPurchasesOutflow = db.cars.reduce((sum, c) => sum + c.purchasePrice, 0); const allExpensesOutflow = db.expenses.reduce((sum, e) => sum + e.amount, 0); const totalOutflow = carPurchasesOutflow + allExpensesOutflow; const balance = totalInflow - totalOutflow; document.getElementById('db-stock-value').textContent = formatCurrency(stockValue); document.getElementById('db-total-profits').textContent = formatCurrency(totalProfits); document.getElementById('db-balance').textContent = formatCurrency(balance); document.getElementById('t-total-inflow').textContent = formatCurrency(totalInflow); document.getElementById('t-total-outflow').textContent = formatCurrency(totalOutflow); document.getElementById('t-balance').textContent = formatCurrency(balance); };
+        const renderUpcomingInstallments = () => { const container = document.getElementById('upcoming-installments'); container.innerHTML = ''; const today = new Date(); today.setHours(0, 0, 0, 0); const sevenDaysFromNow = new Date(); sevenDaysFromNow.setDate(today.getDate() + 7); const upcoming = db.installments.filter(inst => { const dueDate = new Date(inst.dueDate); return !inst.paid && dueDate >= today && dueDate <= sevenDaysFromNow; }).sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)); if (upcoming.length === 0) { container.innerHTML = '<p class="text-gray-500">لا توجد أقساط مستحقة قريباً.</p>'; return; } upcoming.forEach(inst => { const sale = db.sales.find(s => s.id === inst.saleId); const car = db.cars.find(c => c.id === sale.carId); const customer = db.customers.find(c => c.id === sale.customerId); const carName = car ? `${car.carType} ${car.carModel}` : 'محذوف'; const html = `<div class="flex justify-between items-center border-b pb-2"><div><p class="font-semibold">${customer?.name || 'عميل محذوف'}</p><p class="text-sm text-gray-500">${carName} - ${inst.dueDate}</p></div><div class="font-bold text-red-600">${formatCurrency(inst.amount)}</div></div>`; container.innerHTML += html; }); }
+        const populateFilterDropdowns = () => { const purchaseYears = new Set(db.cars.map(c => c.date.substring(0, 4))); const salesYears = new Set(db.sales.map(s => s.date.substring(0, 4))); const populate = (selectId, years) => { const select = document.getElementById(selectId); select.innerHTML = '<option value="all">كل السنوات</option>'; [...years].sort().reverse().forEach(year => select.innerHTML += `<option value="${year}">${year}</option>`); }; populate('purchase-year-filter', purchaseYears); populate('sale-year-filter', salesYears); const monthSelects = ['purchase-month-filter', 'sale-month-filter']; monthSelects.forEach(id => { const select = document.getElementById(id); select.innerHTML = '<option value="all">كل الشهور</option>'; for (let i = 1; i <= 12; i++) { select.innerHTML += `<option value="${i}">شهر ${i}</option>`; } }); };
+        const populateInstallmentCustomerFilter = () => { const select = document.getElementById('inst-customer-filter'); if(!select) return; const currentValue = select.value; select.innerHTML = '<option value="all">كل العملاء</option>'; const customersWithInstallments = new Set(db.sales.filter(s => s.saleType === 'تقسيط').map(s => s.customerId)); db.customers.filter(c => customersWithInstallments.has(c.id)).forEach(c => { select.innerHTML += `<option value="${c.id}">${c.name}</option>`; }); select.value = currentValue; };
+        const populateArchiveCarFilter = () => { const select = document.getElementById('archive-car-filter'); if (!select) return; const currentValue = select.value; select.innerHTML = '<option value="all">عرض كل المستندات</option>'; db.cars.forEach(car => { select.innerHTML += `<option value="${car.id}">${car.carType} ${car.carModel} (${car.vin})</option>`; }); select.value = currentValue; };
+        const printInstallmentStatement = () => { const customerId = document.getElementById('inst-customer-filter').value; if (customerId === 'all') { showToast('الرجاء اختيار عميل لطباعة كشف الحساب.'); return; } const customer = db.customers.find(c => c.id == customerId); const customerSales = db.sales.filter(s => s.customerId == customerId && s.saleType === 'تقسيط'); let statementHTML = `<div id="print-statement" class="print-area"><div style="padding: 20px; font-family: 'Cairo', sans-serif;"><h2>كشف حساب أقساط</h2><h3>العميل: ${customer.name}</h3><p>تاريخ الطباعة: ${getTodayDate()}</p><hr style="margin: 20px 0;">`; customerSales.forEach(sale => { const car = db.cars.find(c => c.id === sale.carId); statementHTML += `<h4>السيارة: ${car.carType} ${car.carModel}</h4><p>إجمالي سعر البيع: ${formatCurrency(sale.salePrice)} | المقدم: ${formatCurrency(sale.downPayment)}</p><table border="1" style="width: 100%; border-collapse: collapse; text-align: center;"><thead><tr><th>م</th><th>تاريخ الاستحقاق</th><th>قيمة القسط</th><th>الحالة</th></tr></thead><tbody>`; const installmentsForSale = db.installments.filter(i => i.saleId === sale.id).sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)); installmentsForSale.forEach((inst, index) => { statementHTML += `<tr><td>${index+1}</td><td>${inst.dueDate}</td><td>${formatCurrency(inst.amount)}</td><td>${inst.paid ? 'مسدد' : 'مستحق'}</td></tr>`; }); statementHTML += `</tbody></table><br>`; }); statementHTML += `</div></div>`; document.getElementById('installment-statement-container').innerHTML = statementHTML; printContent('print-statement'); };
+        function getNextId() { const allIds = [0, ...db.cars.map(i => i.id), ...db.sales.map(i => i.id), ...db.installments.map(i => i.id), ...db.expenses.map(i => i.id), ...db.customers.map(i => i.id), ...db.suppliers.map(i => i.id), ...db.archive.map(i => i.id) ]; return Math.max(...allIds) + 1; }
+        function getNextInvoiceNumber() { const nextNum = db.invoiceCounter++; saveData(); return nextNum; }
+        
+        // --- START: New Render Functions ---
+        function renderNotifications() { const list = document.getElementById('notification-list'); const countBadge = document.getElementById('notification-count'); list.innerHTML = ''; let notificationCount = 0; const today = new Date(); today.setHours(0, 0, 0, 0); const overdueInstallments = db.installments.filter(inst => { const dueDate = new Date(inst.dueDate); return !inst.paid && dueDate <= today; }); notificationCount += overdueInstallments.length; if (overdueInstallments.length > 0) { overdueInstallments.forEach(inst => { const sale = db.sales.find(s => s.id === inst.saleId); const customer = db.customers.find(c => c.id === sale.customerId); const html = `<div class="p-3 hover:bg-gray-50"><p class="font-semibold text-red-600">قسط متأخر</p><p class="text-sm text-gray-700">للعميل: <strong>${customer?.name || 'غير محدد'}</strong></p><p class="text-sm text-gray-500">مبلغ ${formatCurrency(inst.amount)} | تاريخ الاستحقاق: ${inst.dueDate}</p></div>`; list.innerHTML += html; }); } if (notificationCount > 0) { countBadge.textContent = notificationCount; countBadge.style.display = 'flex'; } else { countBadge.style.display = 'none'; list.innerHTML = '<p class="p-4 text-center text-gray-500">لا توجد تنبيهات جديدة.</p>'; } }
+        function renderActivityLog() { const tbody = document.querySelector("#activity-log-table tbody"); tbody.innerHTML = ""; [...db.activityLog].reverse().forEach(log => { tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-3 text-sm text-gray-500">${log.timestamp}</td><td class="p-3 font-semibold">${log.user}</td><td class="p-3 text-right">${log.description}</td></tr>`; }); }
+        // --- END: New Render Functions ---
+
+        // --- Action Handlers (Delete, Edit, Pay) ---
+        const openCarDetailsModal = (carId) => { const car = db.cars.find(c => c.id === carId); if (!car) return; const supplier = db.suppliers.find(s => s.id === car.supplierId); const maintenanceExpenses = db.expenses.filter(e => e.carId === carId && e.type === 'صيانة'); const sale = db.sales.find(s => s.carId === carId); const customer = sale ? db.customers.find(c => c.id === sale.customerId) : null; const totalCost = car.purchasePrice + car.maintenanceCost; const profit = sale ? sale.salePrice - totalCost : 0; let html = `<div id="carDetailsContentToPrint"><h3 class="text-2xl font-bold mb-4 border-b pb-2 text-blue-700">ملف السيارة: ${car.carType} ${car.carModel} ${car.modelYear} (#${car.fileNumber})</h3><div class="grid grid-cols-2 gap-4 text-sm mb-4"><div><strong>رقم الشاسيه:</strong> ${car.vin}</div><div><strong>اللون:</strong> ${car.color}</div><div><strong>الحالة:</strong> ${car.status}</div><div><strong>التكلفة الإجمالية:</strong> ${formatCurrency(totalCost)}</div><div><strong>عداد الشراء:</strong> ${car.purchaseOdometer || 'غير مسجل'} كم</div><div><strong>عداد البيع:</strong> ${sale?.saleOdometer || 'غير مباعة'} كم</div></div><div class="bg-gray-50 p-4 rounded-lg mb-4"><h4 class="font-bold text-lg mb-2">بيانات الشراء</h4><p><strong>المورد:</strong> ${supplier?.name || 'غير محدد'}</p><p><strong>تاريخ الشراء:</strong> ${car.date}</p><p><strong>سعر الشراء:</strong> ${formatCurrency(car.purchasePrice)}</p></div><div class="bg-gray-50 p-4 rounded-lg mb-4"><h4 class="font-bold text-lg mb-2">سجل الصيانة</h4>${maintenanceExpenses.length > 0 ? `<ul>${maintenanceExpenses.map(e => `<li class="flex justify-between border-b py-1"><span>${e.description} (${e.date})</span> <strong>${formatCurrency(e.amount)}</strong></li>`).join('')}</ul><div class="text-right font-bold mt-2">الإجمالي: ${formatCurrency(car.maintenanceCost)}</div>` : '<p>لا يوجد مصاريف صيانة مسجلة.</p>'}</div>${sale ? `<div class="bg-green-50 p-4 rounded-lg"><h4 class="font-bold text-lg mb-2 text-green-700">بيانات البيع</h4><p><strong>العميل:</strong> ${customer?.name || 'غير محدد'}</p><p><strong>تاريخ البيع:</strong> ${sale.date}</p><p><strong>سعر البيع:</strong> ${formatCurrency(sale.salePrice)}</p><p><strong>نوع السداد:</strong> ${sale.saleType} ${sale.saleType === 'تقسيط' ? `(مقدم: ${formatCurrency(sale.downPayment)})` : ''}</p><p class="font-bold mt-2"><strong>الربح:</strong> <span class="${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${formatCurrency(profit)}</span></p></div>` : `<div class="bg-blue-50 p-4 rounded-lg text-center"><h4 class="font-bold text-lg">السيارة متاحة للبيع</h4></div>`}</div>`; document.getElementById('carDetailsContent').innerHTML = html; openModal('carDetailsModal'); };
+        const deleteCar = (id) => { const car = db.cars.find(c => c.id === id); if (car.isSold) { showToast("لا يمكن حذف سيارة مباعة. احذف عملية البيع أولاً."); return; } openConfirmModal(`هل أنت متأكد من حذف السيارة "${car.carType} ${car.carModel}"؟`, () => { logActivity(`حذف السيارة: ${car.carType} ${car.carModel} (ملف #${car.fileNumber})`); db.cars = db.cars.filter(c => c.id !== id); db.expenses = db.expenses.filter(e => e.carId !== id); showToast("تم حذف السيارة."); saveData(); renderAll(document.getElementById('globalSearch').value); }); };
+        const deleteSale = (id) => { const sale = db.sales.find(s => s.id === id); const car = db.cars.find(c => c.id === sale.carId); const customer = db.customers.find(c => c.id === sale.customerId); const carName = car ? `${car.carType} ${car.carModel}` : 'المحذوفة'; openConfirmModal(`هل أنت متأكد من حذف بيع السيارة "${carName}"؟ ستعود السيارة للمخزون وسيتم حذف الأقساط المتعلقة بها.`, () => { if (car) car.isSold = false; logActivity(`حذف عملية بيع السيارة "${carName}" للعميل "${customer?.name}"`); db.sales = db.sales.filter(s => s.id !== id); db.installments = db.installments.filter(i => i.saleId !== id); showToast("تم حذف عملية البيع."); saveData(); renderAll(document.getElementById('globalSearch').value); }); };
+        const deletePerson = (id, type) => { const person = db[type].find(p => p.id === id); const typeArabic = type === 'customers' ? 'العميل' : 'المورد'; if (type === 'customers') { const hasSales = db.sales.some(sale => sale.customerId === id); if (hasSales) { showToast(`لا يمكن حذف هذا العميل لوجود فواتير بيع مرتبطة به.`); return; } } if (type === 'suppliers') { const hasPurchases = db.cars.some(car => car.supplierId === id); if (hasPurchases) { showToast(`لا يمكن حذف هذا المورد لوجود سيارات مرتبطة به.`); return; } } openConfirmModal(`هل أنت متأكد من حذف ${typeArabic} "${person.name}"؟`, () => { logActivity(`حذف ${typeArabic}: ${person.name}`); db[type] = db[type].filter(p => p.id !== id); showToast(`تم حذف ${typeArabic}.`); saveData(); renderAll(document.getElementById('globalSearch').value); }); };
+        const deleteExpense = (id) => { const expense = db.expenses.find(e => e.id === id); openConfirmModal(`هل أنت متأكد من حذف مصروف "${expense.description}"؟`, () => { if (expense.type === 'صيانة' && expense.carId) { const car = db.cars.find(c => c.id === expense.carId); if(car) car.maintenanceCost = Math.max(0, car.maintenanceCost - expense.amount); } logActivity(`حذف مصروف: "${expense.description}" بقيمة ${formatCurrency(expense.amount)}`); db.expenses = db.expenses.filter(e => e.id !== id); showToast("تم حذف المصروف."); saveData(); renderAll(document.getElementById('globalSearch').value); }); };
+        const deleteArchiveItem = (id) => { const item = db.archive.find(i => i.id === id); openConfirmModal(`هل أنت متأكد من حذف مستند "${item.title}" من الأرشيف؟`, () => { logActivity(`حذف مستند من الأرشيف: ${item.title}`); db.archive = db.archive.filter(i => i.id !== id); showToast("تم حذف المستند من الأرشيف."); saveData(); renderAll(document.getElementById('globalSearch').value); }); };
+        const openEditCarModal = (id) => { const car = db.cars.find(c => c.id === id); if (!car) return; document.getElementById('editCarId').value = car.id; document.getElementById('editCarType').value = car.carType; document.getElementById('editCarModel').value = car.carModel; document.getElementById('editModelYear').value = car.modelYear; document.getElementById('editColor').value = car.color; document.getElementById('editCarVin').value = car.vin; document.getElementById('editCarPurchasePrice').value = car.purchasePrice; document.getElementById('editCarMaintenanceCost').value = car.maintenanceCost; openModal('editCarModal'); };
+        const openEditPersonModal = (id, type) => { const person = db[type].find(p => p.id === id); if (!person) return; document.getElementById('editPersonTitle').textContent = `تعديل بيانات ${type === 'customers' ? 'عميل' : 'مورد'}`; document.getElementById('editPersonId').value = person.id; document.getElementById('editPersonType').value = type; document.getElementById('editPersonName').value = person.name; document.getElementById('editPersonPhone').value = person.phone; document.getElementById('editPersonAddress').value = person.address; openModal('editPersonModal'); };
+        const openEditExpenseModal = (id) => { const expense = db.expenses.find(e => e.id === id); if (!expense) return; if(expense.type === 'صيانة') { showToast('لا يمكن تعديل مصروف صيانة مرتبط بسيارة، قم بتعديله من ملف السيارة.'); return;} document.getElementById('editExpenseId').value = expense.id; document.getElementById('editExpenseDescription').value = expense.description; document.getElementById('editExpenseAmount').value = expense.amount; openModal('editExpenseModal'); };
+        const payInstallment = (installmentId) => { const installment = db.installments.find(i => i.id === installmentId); if (installment) { installment.paid = true; installment.paidDate = getTodayDate(); const sale = db.sales.find(s => s.id === installment.saleId); const customer = db.customers.find(c => c.id === sale.customerId); logActivity(`تسديد قسط بقيمة ${formatCurrency(installment.amount)} من العميل "${customer?.name}"`); showToast(`تم تسديد قسط بقيمة ${formatCurrency(installment.amount)}`); saveData(); renderAll(document.getElementById('globalSearch').value); } };
+        
+        // --- START: New Person Statement Function ---
+        function showPersonStatement(personId, type) { const person = db[type].find(p => p.id === personId); if (!person) return; let html = ''; const container = document.getElementById('statementContent'); if (type === 'customers') { const customerSales = db.sales.filter(s => s.customerId === personId); let totalBalance = 0; html = `<h2 class="text-2xl font-bold mb-4">كشف حساب العميل: ${person.name}</h2><p class="mb-6">تاريخ الطباعة: ${getTodayDate()}</p>`; if (customerSales.length === 0) { html += '<p>لا توجد عمليات بيع مسجلة لهذا العميل.</p>'; } else { customerSales.forEach(sale => { const car = db.cars.find(c => c.id === sale.carId); const paidInstallments = db.installments.filter(i => i.saleId === sale.id && i.paid).reduce((sum, i) => sum + i.amount, 0); const totalPaid = sale.downPayment + paidInstallments; const balance = sale.salePrice - totalPaid; totalBalance += balance; html += `<div class="mb-6 p-4 border rounded-lg bg-gray-50"><h3 class="font-bold text-lg border-b pb-2 mb-2">سيارة: ${car?.carType || 'محذوفة'} ${car?.carModel || ''}</h3><div class="grid grid-cols-2 gap-x-4"><p><strong>سعر البيع:</strong> ${formatCurrency(sale.salePrice)}</p><p><strong>المقدم المدفوع:</strong> ${formatCurrency(sale.downPayment)}</p><p><strong>مجموع الأقساط المسددة:</strong> ${formatCurrency(paidInstallments)}</p><p><strong>إجمالي المسدد:</strong> ${formatCurrency(totalPaid)}</p><p class="col-span-2 mt-2 pt-2 border-t font-bold"><strong>المبلغ المتبقي على السيارة:</strong> <span class="text-red-600">${formatCurrency(balance)}</span></p></div></div>`; }); html += `<div class="mt-8 p-4 bg-blue-100 rounded-lg text-center"><h3 class="text-xl font-bold text-blue-800">إجمالي الرصيد المتبقي على العميل: ${formatCurrency(totalBalance)}</h3></div>`; } } else if (type === 'suppliers') { const supplierPurchases = db.cars.filter(c => c.supplierId === personId); let totalPurchasesValue = 0; html = `<h2 class="text-2xl font-bold mb-4">كشف حساب المورد: ${person.name}</h2><p class="mb-6">تاريخ الطباعة: ${getTodayDate()}</p><table class="w-full text-center border"><thead class="bg-gray-200"><tr><th class="p-3 border">تاريخ الشراء</th><th class="p-3 border">السيارة</th><th class="p-3 border">سعر الشراء</th></tr></thead><tbody>`; if (supplierPurchases.length > 0) { supplierPurchases.forEach(car => { totalPurchasesValue += car.purchasePrice; html += `<tr><td class="p-2 border">${car.date}</td><td class="p-2 border">${car.carType} ${car.carModel}</td><td class="p-2 border">${formatCurrency(car.purchasePrice)}</td></tr>`; }); } html += `</tbody></table><div class="mt-8 p-4 bg-green-100 rounded-lg text-right"><h3 class="text-xl font-bold text-green-800">إجمالي قيمة المشتريات من المورد: ${formatCurrency(totalPurchasesValue)}</h3><p class="text-sm text-gray-600 mt-2">ملاحظة: لتتبع المدفوعات للموردين بدقة، يجب تطوير وحدة خاصة بالديون للموردين.</p></div>`; } container.innerHTML = html; openModal('statementModal'); }
+        // --- END: New Person Statement Function ---
+        
+        // --- Form Submit Listeners with Activity Logging ---
+        function setupFormListeners() {
+            document.getElementById('addPurchaseForm').addEventListener('submit', function(e) { e.preventDefault(); const vin = document.getElementById('purchaseVin').value; if (db.cars.some(c => c.vin === vin && vin.length > 0)) { showToast("رقم الشاسيه هذا مسجل بالفعل!"); return; } const carType = document.getElementById('purchaseCarType').value; const carModel = document.getElementById('purchaseCarModel').value; const newCar = { id: getNextId(), fileNumber: db.carFileCounter++, createdBy: currentUser.name, carType: carType, carModel: carModel, modelYear: parseInt(document.getElementById('purchaseModelYear').value), color: document.getElementById('purchaseColor').value, vin: vin, status: document.getElementById('purchaseStatus').value, purchasePrice: parseFloat(document.getElementById('purchasePrice').value), purchaseOdometer: document.getElementById('purchaseOdometer').value, maintenanceCost: 0, isSold: false, supplierId: parseInt(document.getElementById('purchaseSupplier').value), date: document.getElementById('purchaseDate').value }; newCar.invoiceNumber = getNextInvoiceNumber(); db.cars.push(newCar); logActivity(`تسجيل شراء سيارة: ${carType} ${carModel} بسعر ${formatCurrency(newCar.purchasePrice)}`); showToast(`تم تسجيل السيارة ${newCar.carType} ${newCar.carModel}.`); saveData(); populateFilterDropdowns(); renderAll(); closeModal('addPurchaseModal'); e.target.reset(); });
+            document.getElementById('addSaleForm').addEventListener('submit', function(e) { e.preventDefault(); const carId = parseInt(document.getElementById('saleCarId').value); if (!carId) { showToast("الرجاء اختيار سيارة"); return; } const car = db.cars.find(c => c.id === carId); if (!car || car.isSold) { showToast("خطأ: السيارة غير متاحة أو مباعة!"); return; } const saleId = getNextId(); const customerId = parseInt(document.getElementById('saleCustomerId').value); const customer = db.customers.find(c => c.id === customerId); const saleData = { id: saleId, createdBy: currentUser.name, carId: carId, customerId: customerId, salePrice: parseFloat(document.getElementById('salePrice').value), saleOdometer: document.getElementById('saleOdometer').value, saleType: document.getElementById('saleType').value, date: document.getElementById('saleDate').value, downPayment: 0 }; if (saleData.saleType === 'تقسيط') { saleData.downPayment = parseFloat(document.getElementById('saleDownPayment').value) || 0; const installmentCount = parseInt(document.getElementById('saleInstallmentCount').value); const remaining = saleData.salePrice - saleData.downPayment; if (remaining < 0 || installmentCount <= 0) { showToast('بيانات التقسيط غير صحيحة.'); return; } const installmentAmount = remaining / installmentCount; let installmentDate = new Date(saleData.date); for (let i = 1; i <= installmentCount; i++) { installmentDate.setMonth(installmentDate.getMonth() + 1); db.installments.push({ id: getNextId(), saleId: saleId, amount: installmentAmount, dueDate: installmentDate.toISOString().slice(0, 10), paid: false }); } } else { saleData.downPayment = saleData.salePrice; } saleData.invoiceNumber = getNextInvoiceNumber(); db.sales.push(saleData); car.isSold = true; logActivity(`تسجيل عملية بيع للسيارة "${car.carType} ${car.carModel}" إلى العميل "${customer?.name}"`); showToast(`تم بيع السيارة ${car.carType} ${car.carModel}.`); saveData(); populateFilterDropdowns(); renderAll(); closeModal('addSaleModal'); e.target.reset(); });
+            document.getElementById('addExpenseForm').addEventListener('submit', function(e) { e.preventDefault(); const description = document.getElementById('expenseDescription').value; const amount = parseFloat(document.getElementById('expenseAmount').value); const newExpense = { id: getNextId(), createdBy: currentUser.name, description: description, type: document.getElementById('expenseType').value, amount: amount, carId: document.getElementById('expenseCarId').value ? parseInt(document.getElementById('expenseCarId').value) : null, date: document.getElementById('expenseDate').value }; if (newExpense.type === 'صيانة' && newExpense.carId) { newExpense.invoiceNumber = getNextInvoiceNumber(); const car = db.cars.find(c => c.id === newExpense.carId); if (car) car.maintenanceCost += newExpense.amount; } db.expenses.push(newExpense); logActivity(`تسجيل مصروف: "${description}" بقيمة ${formatCurrency(amount)}`); showToast("تم تسجيل المصروف."); saveData(); renderAll(); closeModal('addExpenseModal'); e.target.reset(); });
+            document.getElementById('addClientForm').addEventListener('submit', (e) => { e.preventDefault(); const name = document.getElementById('clientName').value; db.customers.push({ id: getNextId(), name: name, phone: document.getElementById('clientPhone').value, address: document.getElementById('clientAddress').value }); logActivity(`إضافة عميل جديد: ${name}`); showToast(`تم إضافة العميل ${name}.`); saveData(); renderAll(); closeModal('addClientModal'); e.target.reset(); });
+            document.getElementById('addSupplierForm').addEventListener('submit', (e) => { e.preventDefault(); const name = document.getElementById('supplierName').value; db.suppliers.push({ id: getNextId(), name: name, phone: document.getElementById('supplierPhone').value, address: document.getElementById('supplierAddress').value }); logActivity(`إضافة مورد جديد: ${name}`); showToast(`تم إضافة المورد ${name}.`); saveData(); renderAll(); closeModal('addSupplierModal'); e.target.reset(); });
+            document.getElementById('editCarForm').addEventListener('submit', function(e) { e.preventDefault(); const id = parseInt(document.getElementById('editCarId').value); const car = db.cars.find(c => c.id === id); if (car) { logActivity(`تعديل بيانات السيارة: ${car.carType} ${car.carModel}`); car.carType = document.getElementById('editCarType').value; car.carModel = document.getElementById('editCarModel').value; car.modelYear = parseInt(document.getElementById('editModelYear').value); car.color = document.getElementById('editColor').value; car.vin = document.getElementById('editCarVin').value; car.purchasePrice = parseFloat(document.getElementById('editCarPurchasePrice').value); car.maintenanceCost = parseFloat(document.getElementById('editCarMaintenanceCost').value); showToast("تم تحديث بيانات السيارة."); saveData(); renderAll(document.getElementById('globalSearch').value); closeModal('editCarModal'); } });
+            document.getElementById('editPersonForm').addEventListener('submit', function(e) { e.preventDefault(); const id = parseInt(document.getElementById('editPersonId').value); const type = document.getElementById('editPersonType').value; const person = db[type].find(p => p.id === id); if (person) { logActivity(`تعديل بيانات ${type === 'customers' ? 'العميل' : 'المورد'}: ${person.name}`); person.name = document.getElementById('editPersonName').value; person.phone = document.getElementById('editPersonPhone').value; person.address = document.getElementById('editPersonAddress').value; showToast("تم تحديث البيانات."); saveData(); renderAll(document.getElementById('globalSearch').value); closeModal('editPersonModal'); } });
+            document.getElementById('editExpenseForm').addEventListener('submit', function(e) { e.preventDefault(); const id = parseInt(document.getElementById('editExpenseId').value); const expense = db.expenses.find(ex => ex.id === id); if (expense) { logActivity(`تعديل المصروف: ${expense.description}`); expense.description = document.getElementById('editExpenseDescription').value; expense.amount = parseFloat(document.getElementById('editExpenseAmount').value); showToast("تم تحديث المصروف."); saveData(); renderAll(document.getElementById('globalSearch').value); closeModal('editExpenseModal'); } });
+            document.getElementById('addArchiveForm').addEventListener('submit', function(e) { e.preventDefault(); const title = document.getElementById('archiveTitle').value; const newArchiveItem = { id: getNextId(), createdBy: currentUser.name, title: title, description: document.getElementById('archiveDescription').value, link: document.getElementById('archiveLink').value, date: document.getElementById('archiveDate').value, carId: document.getElementById('archiveCarId').value ? parseInt(document.getElementById('archiveCarId').value) : null }; db.archive.push(newArchiveItem); logActivity(`إضافة مستند للأرشيف: ${title}`); showToast("تم حفظ المستند في الأرشيف."); saveData(); renderAll(); closeModal('addArchiveModal'); e.target.reset(); });
+        }
+
+        // --- Invoice Generation ---
+        function generateInvoiceHTML(title, invoiceNumber, date, partyType, party, items, totals) { const invoiceNumFormatted = String(invoiceNumber).padStart(4, '0'); return `<div style="padding: 25px; font-family: 'Cairo', sans-serif; background-color: white; color: #333;"><div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1d4ed8; padding-bottom: 15px;"><div><h1 style="font-size: 28px; color: #1d4ed8; margin: 0;">شركة المتوكل على الله للسيارات</h1><p style="margin: 5px 0; font-size: 14px;">إدارة: الحاج السيد زيان شامية وابو زياد</p><p style="margin: 5px 0; font-size: 12px; color: #555;">العنوان: محافظة المنوفية - مركز تلا - طوخ دلكا</p><p style="margin: 5px 0; font-size: 12px; color: #555;">للتواصل: محمود السيد (01094075438) | ابو جني (01027013001) | ابو زياد (01003994391)</p></div><div style="text-align: left;"><h2 style="font-size: 24px; margin:0; color: #333;">${title}</h2><p style="margin: 5px 0;"><strong>رقم:</strong> #${invoiceNumFormatted}</p><p style="margin: 5px 0;"><strong>التاريخ:</strong> ${date}</p></div></div><div style="margin-top: 30px; padding-bottom: 30px; border-bottom: 1px solid #eee;"><h3 style="margin: 0; font-size: 16px; color: #555;">${partyType}:</h3><p style="margin: 5px 0 0 0; font-weight: bold; font-size: 18px;">${party.name}</p>${party.phone ? `<p style="margin: 5px 0 0 0;">هاتف: ${party.phone}</p>` : ''}${party.address ? `<p style="margin: 5px 0 0 0;">عنوان: ${party.address}</p>` : ''}</div><table style="width: 100%; margin-top: 30px; border-collapse: collapse; font-size: 14px;"><thead style="background-color: #f9fafb;"><tr><th style="border: 1px solid #ddd; padding: 12px; text-align: right; background-color: #e5e7eb;">البيان</th><th style="border: 1px solid #ddd; padding: 12px; text-align: center; width: 150px; background-color: #e5e7eb;">المبلغ</th></tr></thead><tbody>${items.map(item => `<tr><td style="border: 1px solid #ddd; padding: 12px;">${item.description}${item.subDescription ? `<br><small style="color: #666;">${item.subDescription}</small>` : ''}</td><td style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">${formatCurrency(item.amount)}</td></tr>`).join('')}</tbody></table><div style="margin-top: 30px; text-align: left; width: 60%; margin-left: auto;">${totals.map(total => `<div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; font-size: 16px; ${total.isBold ? 'font-weight: bold; background-color: #f3f4f6;' : ''}"><strong>${total.label}:</strong><span style="font-weight: bold; color: ${total.color || '#1d4ed8'};">${formatCurrency(total.value)}</span></div>`).join('')}</div><div style="margin-top: 60px; display: flex; justify-content: space-between; font-size: 14px; color: #777; border-top: 1px solid #eee; padding-top: 20px;"><p><strong>توقيع المستلم:</strong> ....................................</p><p><strong>توقيع البائع:</strong> ....................................</p></div></div>`; }
+        function showInvoice(type, id) { let invoiceHTML = '', data, car, party, items, totals, title, invoiceNumber, date, partyType; switch(type) { case 'purchase': data = db.cars.find(c => c.id === id); if (!data) return; car = data; party = db.suppliers.find(s => s.id === car.supplierId) || { name: 'غير محدد' }; title = 'فاتورة شراء'; invoiceNumber = `شراء-${data.invoiceNumber}`; date = car.date; partyType = 'تم الشراء من'; items = [{ description: `سيارة ${car.carType} ${car.carModel} موديل ${car.modelYear}`, subDescription: `رقم الشاسيه: ${car.vin}`, amount: car.purchasePrice }]; totals = [{ label: 'المبلغ المدفوع', value: car.purchasePrice, isBold: true }]; break; case 'sale': data = db.sales.find(s => s.id === id); if (!data) return; car = db.cars.find(c => c.id === data.carId); party = db.customers.find(c => c.id === data.customerId) || { name: 'غير محدد' }; title = 'فاتورة بيع'; invoiceNumber = `بيع-${data.invoiceNumber}`; date = data.date; partyType = 'فاتورة إلى'; items = [{ description: `سيارة ${car.carType} ${car.carModel} موديل ${car.modelYear}`, subDescription: `رقم الشاسيه: ${car.vin}`, amount: data.salePrice }]; const remaining = data.salePrice - data.downPayment; totals = [ { label: 'إجمالي الفاتورة', value: data.salePrice, isBold: true }, { label: 'المدفوع (مقدم)', value: data.downPayment, color: '#15803d' }, { label: 'المبلغ المتبقي', value: remaining, color: '#b91c1c' } ]; break; case 'maintenance': data = db.expenses.find(e => e.id === id); if (!data) return; car = db.cars.find(c => c.id === data.carId); party = { name: "شركة المتوكل على الله", address: "خاص بالشركة" }; title = 'فاتورة صيانة'; invoiceNumber = `صيانة-${data.invoiceNumber}`; date = data.date; partyType = 'صادرة إلى'; items = [{ description: `مصروفات صيانة: ${data.description}`, subDescription: `خاص بالسيارة ${car.carType} ${car.carModel} (${car.vin})`, amount: data.amount }]; totals = [{ label: 'إجمالي الصيانة', value: data.amount, isBold: true }]; break; case 'installment': data = db.installments.find(i => i.id === id); if (!data) return; const sale = db.sales.find(s => s.id === data.saleId); car = db.cars.find(c => c.id === sale.carId); party = db.customers.find(c => c.id === sale.customerId); title = 'إيصال سداد قسط'; invoiceNumber = `إيصال-${data.id}`; date = data.paidDate || getTodayDate(); partyType = 'العميل'; items = [{ description: `القسط المستحق بتاريخ ${data.dueDate}`, subDescription: `عن سيارة ${car.carType} ${car.carModel}`, amount: data.amount }]; totals = [{ label: `إجمالي الإيصال (مسدد)`, value: data.amount, isBold: true, color: '#15803d' }]; break; } if (data) { invoiceHTML = generateInvoiceHTML(title, invoiceNumber, date, partyType, party, items, totals); document.getElementById('invoiceContent').innerHTML = invoiceHTML; openModal('invoiceModal'); } }
+        
+        // --- START: YouTube Background Player ---
+        // استبدل 'fAn29r9u0uA' بمعرف الفيديو الذي تريده من رابط يوتيوب
+        const videoId = 'fAn29r9u0uA'; // مثال لمعرف فيديو (موسيقى هادئة)
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        var player;
+        function onYouTubeIframeAPIReady() { if (currentUser) { player = new YT.Player('youtube-player', { height: '0', width: '0', videoId: videoId, playerVars: { 'autoplay': 1, 'controls': 0, 'loop': 1, 'playlist': videoId }, events: { 'onReady': onPlayerReady } }); } }
+        function onPlayerReady(event) { event.target.playVideo(); event.target.setVolume(30); }
+        // --- END: YouTube Background Player ---
+
+        // --- DOMContentLoaded Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('login-form');
+            const usernameSelect = document.getElementById('username-select');
+            const passwordInput = document.getElementById('password-input');
+            const passwordError = document.getElementById('password-error');
+            const passwordOverlay = document.getElementById('password-overlay');
+            const appContainer = document.getElementById('app-container');
+            users.forEach(user => { const option = document.createElement('option'); option.value = user.username; option.textContent = user.name; usernameSelect.appendChild(option); });
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const selectedUsername = usernameSelect.value;
+                const enteredPassword = passwordInput.value;
+                const user = users.find(u => u.username === selectedUsername);
+                if (user && user.password === enteredPassword) {
+                    currentUser = user;
+                    passwordOverlay.style.display = 'none';
+                    appContainer.style.display = 'block';
+                    document.getElementById('current-user-name').textContent = currentUser.name;
+                    logActivity('تسجيل الدخول إلى النظام');
+                    loadData();
+                    applyPermissions(); 
+                    setupFormListeners();
+                    populateFilterDropdowns();
+                    renderAll();
+                    const firstVisibleTab = document.querySelector('#main-nav .tab-link:not([style*="display: none"])');
+                    if(firstVisibleTab) firstVisibleTab.click();
+                    onYouTubeIframeAPIReady(); // Start YouTube player after successful login
+                } else {
+                    passwordError.style.display = 'block';
+                    passwordInput.classList.add('border-red-500');
+                    usernameSelect.classList.add('border-red-500');
+                }
+            });
+            window.onclick = function(event) { if (event.target.classList.contains('modal')) closeModal(event.target.id); };
+            document.getElementById('globalSearch').addEventListener('input', (e) => renderAll(e.target.value));
+            document.getElementById('saleType').addEventListener('change', function() { document.getElementById('installment-fields').style.display = this.value === 'تقسيط' ? 'block' : 'none'; });
+            document.getElementById('expenseType').addEventListener('change', function() { document.getElementById('expense-car-link').style.display = this.value === 'صيانة' ? 'block' : 'none'; });
+            document.getElementById('print-statement-btn').addEventListener('click', printInstallmentStatement);
+            ['purchase-year-filter', 'purchase-month-filter', 'sale-year-filter', 'sale-month-filter', 'inst-customer-filter', 'archive-car-filter'].forEach(id => { const element = document.getElementById(id); if (element) { element.addEventListener('change', () => renderAll(document.getElementById('globalSearch').value)); } });
+        });
+    </script>
+</body>
+</html>
