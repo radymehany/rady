@@ -2428,6 +2428,9 @@ document.getElementById('addPurchaseForm').addEventListener('submit', function(e
 
                     // تحديث البيانات من الفورم (بدون تغيير السيارة/العميل لتفادي مشاكل التوافر)
                     sale.date = document.getElementById('saleDate')?.value || sale.date;
+                    if (!sale.createdAt) sale.createdAt = (new Date()).toISOString();
+                    if (!sale.saleTime && sale.createdAt) sale.saleTime = (new Date(sale.createdAt)).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
+                    if (!sale.saleTime) sale.saleTime = (new Date()).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
                     sale.saleType = document.getElementById('saleType')?.value || sale.saleType;
                     sale.salePrice = parseFloat(document.getElementById('salePrice')?.value || sale.salePrice || 0);
                     sale.downPayment = parseFloat((document.getElementById('saleDownPayment')?.value || document.getElementById('paymentsDownPayment')?.value || document.getElementById('downPayment')?.value || sale.downPayment || 0));
@@ -2455,7 +2458,9 @@ document.getElementById('addPurchaseForm').addEventListener('submit', function(e
                     e.target.reset();
                     renderAll();
                     return;
-                } const carId = parseInt(document.getElementById('saleCarId').value); if (!carId) { showToast("الرجاء اختيار سيارة"); return; } const car = db.cars.find(c => c.id === carId); if (!car || car.status !== CAR_STATUSES.AVAILABLE) { showToast("خطأ: السيارة غير متاحة للبيع!"); return; } const saleId = getNextId('sales'); const customerId = parseInt(document.getElementById('saleCustomerId').value); const customer = db.customers.find(c => c.id === customerId); const additionalCharges = []; document.querySelectorAll('.additional-charge-item').forEach(item => { const desc = item.querySelector('.charge-desc').value; const amount = parseFloat(item.querySelector('.charge-amount').value); if (desc && amount > 0) { additionalCharges.push({ description: desc, amount: amount }); } }); const saleData = { id: saleId, createdBy: currentUser.name, carId: carId, customerId: customerId, salePrice: parseFloat(document.getElementById('salePrice').value), additionalCharges: additionalCharges, saleOdometer: document.getElementById('saleOdometer').value, saleType: document.getElementById('saleType').value, date: document.getElementById('saleDate').value, downPayment: 0 }; const totalSalePrice = saleData.salePrice + additionalCharges.reduce((sum, charge) => sum + charge.amount, 0); if (saleData.saleType === 'تقسيط') {
+                } const carId = parseInt(document.getElementById('saleCarId').value); if (!carId) { showToast("الرجاء اختيار سيارة"); return; } const car = db.cars.find(c => c.id === carId); if (!car || car.status !== CAR_STATUSES.AVAILABLE) { showToast("خطأ: السيارة غير متاحة للبيع!"); return; } const saleId = getNextId('sales'); const customerId = parseInt(document.getElementById('saleCustomerId').value); const customer = db.customers.find(c => c.id === customerId); const additionalCharges = []; document.querySelectorAll('.additional-charge-item').forEach(item => { const desc = item.querySelector('.charge-desc').value; const amount = parseFloat(item.querySelector('.charge-amount').value); if (desc && amount > 0) { additionalCharges.push({ description: desc, amount: amount }); } }); const saleData = { id: saleId,
+                    createdAt: (new Date()).toISOString(),
+                    saleTime: (new Date()).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}), createdBy: currentUser.name, carId: carId, customerId: customerId, salePrice: parseFloat(document.getElementById('salePrice').value), additionalCharges: additionalCharges, saleOdometer: document.getElementById('saleOdometer').value, saleType: document.getElementById('saleType').value, date: document.getElementById('saleDate').value, downPayment: 0 }; const totalSalePrice = saleData.salePrice + additionalCharges.reduce((sum, charge) => sum + charge.amount, 0); if (saleData.saleType === 'تقسيط') {
                         saleData.downPayment = parseFloat(document.getElementById('saleDownPayment').value) || 0;
                         const installmentCount = parseInt(document.getElementById('saleInstallmentCount').value);
                         const remaining = totalSalePrice - saleData.downPayment;
@@ -3054,6 +3059,7 @@ contract = {
     id: db.contractCounter ? (db.contractCounter++) : (db.contractCounter = 2, 1),
     saleId,
     date: sale.date || getTodayDate(),
+    saleTime: sale.saleTime || '',
 
     // بيانات البائع/المعرض (يمكن تعديلها لاحقاً من قسم العقود)
     showroomId: showroomDefault.id,
@@ -3157,7 +3163,7 @@ function buildContractHTML(contract){
     const carNo = escapeHtml(contract.plateNumber || contract.carPlate || (carObj?.plateNumber || carObj?.plate || ''));
     const vin = escapeHtml(contract.vin || carObj?.vin || '');
     const engine = escapeHtml(contract.engineNumber || carObj?.engineNumber || carObj?.engine || '');
-    const derivedBrand = ((carObj?.type || '') + ' ' + (carObj?.model || '')).trim();
+    const derivedBrand = ((carObj?.carType || carObj?.type || '') + ' ' + (carObj?.carModel || carObj?.model || '')).trim();
     const brand = escapeHtml(((contract.carBrand || contract.carType || derivedBrand || '') + '').trim());
     const derivedYear = (carObj?.year ?? carObj?.manufactureYear ?? carObj?.modelYear ?? '');
     const model = escapeHtml(String(contract.modelYear || contract.carYear || contract.carModelYear || derivedYear || ''));
@@ -3170,6 +3176,36 @@ function buildContractHTML(contract){
 
     const d = (contract.date || '').toString();
     const todayLine = d ? `<strong>${escapeHtml(d)}</strong>` : '____/____/______';
+
+    // ساعة البيع (من وقت تسجيل البيع في النظام) + الموافق (اسم يوم الأسبوع حسب تاريخ البيع)
+const saleObj = (contract.saleId != null) ? (db.sales||[]).find(x=>String(x.id)===String(contract.saleId)) : null;
+
+// 1) الساعة: من createdAt لو موجود (وقت تسجيل البيع)، وإلا saleTime
+let contractHour = '';
+try {
+    if (saleObj && saleObj.createdAt) {
+        const dt = new Date(saleObj.createdAt);
+        contractHour = dt.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
+    } else if (saleObj && saleObj.saleTime) {
+        contractHour = String(saleObj.saleTime);
+    } else if (contract.saleTime) {
+        contractHour = String(contract.saleTime);
+    }
+} catch(e){}
+
+// 2) الموافق: اسم اليوم حسب sale.date (أو contract.date)
+let contractApproval = '';
+try {
+    const dateStr = (saleObj && saleObj.date) ? saleObj.date : (contract.date || '');
+    if (dateStr) {
+        // صيغة YYYY-MM-DD
+        const dt = new Date(dateStr + 'T00:00:00');
+        contractApproval = dt.toLocaleDateString('ar-EG', { weekday:'long' });
+    }
+} catch(e){}
+// fallback لو اتسجل يدويًا
+contractApproval = escapeHtml(String(contractApproval || contract.approvalDay || contract.approval || ''));
+
 
     const line = (label, value='', w='240px') => `
         <div style="display:flex; gap:10px; align-items:flex-end; margin: 4px 0;">
@@ -3191,13 +3227,13 @@ function buildContractHTML(contract){
             
 
             <div style="text-align:center; font-size:16px; font-weight:800; margin:10px 0 14px 0;">
-                عقد بيع سيارة تحت مسؤولية الإدارة
+                عقد بيع سيارة تحت مسؤولية أطرافه
             </div>
             <div style="text-align:center; font-weight:700; margin-top:-8px; margin-bottom:10px;">${showroomName} ${showroomPhone ? ('- ' + showroomPhone) : ''}</div>
 
             ${twoCols(
-                line('إنه في يوم:', todayLine, '300px') + line('الساعة:', '........', '300px'),
-                line('الموافق:', '........', '300px') + line('رقم العقد:', `<strong>#${escapeHtml(String(contract.id||''))}</strong>`, '300px')
+                line('إنه في يوم:', todayLine, '300px') + line('الساعة:', (escapeHtml(contractHour)||'&nbsp;'), '300px'),
+                line('الموافق:', (contractApproval||'اليوم'), '300px') + line('رقم العقد:', `<strong>#${escapeHtml(String(contract.id||''))}</strong>`, '300px')
             )}
 
             <div style="margin-top:10px;">
@@ -3271,9 +3307,9 @@ function buildContractHTML(contract){
                 </div>
                 <div style="margin-top:6px; line-height:1.6;">
                     وأصبحت مسؤولاً عنها مدنياً وجنائياً من الساعة:
-                    <span style="display:inline-block; min-width:90px; border-bottom:1px dotted #000;">&nbsp;</span>
+                    <span style="display:inline-block; min-width:90px; border-bottom:1px dotted #000; padding:0 6px;">${escapeHtml(contractHour||'')}</span>
                     يوم الموافق:
-                    <span style="display:inline-block; min-width:120px; border-bottom:1px dotted #000;">&nbsp;</span>
+                    <span style="display:inline-block; min-width:120px; border-bottom:1px dotted #000; padding:0 6px;">${escapeHtml(contractApproval||'')}</span>
                 </div>
                 <div style="margin-top:10px; display:flex; justify-content:flex-start;">
                     <div style="width:45%; text-align:center;">
@@ -3311,17 +3347,11 @@ function buildContractHTML(contract){
             if (!contract) return;
 
             const body = buildContractHTML(contract);
+            const barcode = `CONTRACT-${contract.id}`;
 
-            // طباعة بدون أي Letterhead وبدون Header إضافي (صفحة واحدة)
-            const html = `
-                <style>
-                    @page{ size: A4; margin: 6mm; }
-                    body{ -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size:12px; }
-                    .print-wrap{ padding:0 !important; }
-                </style>
-                ${body}
-            `;
-            openPrintWindow('عقد بيع ابتدائي', html, {letterhead:false});
+            // نفس ليترهيد كشف حساب الأقساط
+            const html = generateStandardPrintLayout(`عقد بيع رقم ${contract.id}`, body, barcode);
+            openPrintWindow('عقد بيع', html, {letterhead:false});
         }
 
 
