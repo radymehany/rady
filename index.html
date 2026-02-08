@@ -595,7 +595,7 @@
                         <p class="text-sm text-gray-500 mt-1">تسجيل صيانة السيارات، متابعة المدفوع/المعلّق، وفلاتر بالتاريخ والسيارة.</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <button class="btn-primary flex items-center gap-2" onclick="openModal('addMaintenanceModal')">
+                        <button class="btn-primary flex items-center gap-2" onclick="openAddMaintenanceFromMaintenanceTab()">
                             <span class="text-lg">+</span> إضافة صيانة
                         </button>
                         <button class="btn-secondary" onclick="exportMaintenanceCSV()">تصدير CSV</button>
@@ -1039,7 +1039,7 @@
 
 <div><label class="block">تاريخ البيع</label><input type="date" id="saleDate" class="w-full p-2 border rounded" required></div><div class="grid grid-cols-1 md:grid-cols-2 gap-3"><button type="submit" class="w-full bg-emerald-600 text-white p-3 rounded hover:bg-emerald-700">تسجيل البيع</button><button type="button" class="w-full bg-gray-200 text-gray-800 p-3 rounded hover:bg-gray-300" onclick="cancelSale()">إرجاع / إلغاء</button></div></form></div></div>
         <div id="addExpenseModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('addExpenseModal')">×</span><h3 class="text-xl font-bold mb-4">تسجيل مصروف</h3><form id="addExpenseForm" class="space-y-4"><div><label class="block">بيان المصروف</label><input type="text" id="expenseDescription" class="w-full p-2 border rounded" required></div><div><label class="block">نوع المصروف</label><select id="expenseType" class="w-full p-2 border rounded"><option value="عامة">عامة</option><option value="صيانة" disabled>صيانة (يتم تسجيلها من ملف السيارة)</option></select></div><div><label class="block">المبلغ</label><input type="number" step="any" id="expenseAmount" class="w-full p-2 border rounded" required></div><div><label class="block">التاريخ</label><input type="date" id="expenseDate" class="w-full p-2 border rounded" required></div><button type="submit" class="w-full bg-red-600 text-white p-3 rounded hover:bg-red-700">تسجيل المصروف</button></form></div></div>
-        <div id="addMaintenanceModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('addMaintenanceModal')">×</span><h3 class="text-xl font-bold mb-4">إضافة سجل صيانة</h3><form id="addMaintenanceForm" class="space-y-4"><input type="hidden" id="maintenanceCarId"><div class="bg-blue-100 p-2 rounded text-center font-bold" id="maintenanceCarName"></div><div><label>بيان الصيانة</label><input id="maintenanceDescription" class="w-full p-2 border rounded" required></div><div><label>الورشة / الفني</label><input id="maintenanceWorkshop" class="w-full p-2 border rounded"></div><div><label>قطع الغيار المستخدمة</label><textarea id="maintenanceParts" class="w-full p-2 border rounded"></textarea></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label>التكلفة</label><input type="number" step="any" id="maintenanceCost" class="w-full p-2 border rounded" required></div><div><label>عداد السيارة</label><input type="number" id="maintenanceOdometer" class="w-full p-2 border rounded"></div><div><label>تاريخ الصيانة</label><input type="date" id="maintenanceDate" class="w-full p-2 border rounded" required></div></div><button type="submit" class="w-full bg-orange-600 text-white p-3 rounded hover:bg-orange-700">حفظ سجل الصيانة</button></form></div></div>
+        <div id="addMaintenanceModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('addMaintenanceModal')">×</span><h3 class="text-xl font-bold mb-4">إضافة سجل صيانة</h3><form id="addMaintenanceForm" class="space-y-4"><input type="hidden" id="maintenanceCarId"><div><label>اختر السيارة</label><select id="maintenanceCarSelect" class="w-full p-2 border rounded" required></select></div><div class="bg-blue-100 p-2 rounded text-center font-bold" id="maintenanceCarName"></div><div><label>بيان الصيانة</label><input id="maintenanceDescription" class="w-full p-2 border rounded" required></div><div><label>الورشة / الفني</label><input id="maintenanceWorkshop" class="w-full p-2 border rounded"></div><div><label>قطع الغيار المستخدمة</label><textarea id="maintenanceParts" class="w-full p-2 border rounded"></textarea></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label>التكلفة</label><input type="number" step="any" id="maintenanceCost" class="w-full p-2 border rounded" required></div><div><label>عداد السيارة</label><input type="number" id="maintenanceOdometer" class="w-full p-2 border rounded"></div><div><label>تاريخ الصيانة</label><input type="date" id="maintenanceDate" class="w-full p-2 border rounded" required></div></div><button type="submit" class="w-full bg-orange-600 text-white p-3 rounded hover:bg-orange-700">حفظ سجل الصيانة</button></form></div></div>
         <div id="addClientModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('addClientModal')">×</span><h3 class="text-xl font-bold mb-4">إضافة عميل جديد</h3><form id="addClientForm" class="space-y-4"><div><label>الاسم</label><input id="clientName" class="w-full p-2 border rounded" required></div><div><label>الهاتف</label><input id="clientPhone" class="w-full p-2 border rounded"></div><div><label>العنوان</label><input id="clientAddress" class="w-full p-2 border rounded"></div><button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded hover:bg-indigo-700">إضافة</button></form></div></div>
         <div id="addSupplierModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('addSupplierModal')">×</span><h3 class="text-xl font-bold mb-4">إضافة مورد جديد</h3><form id="addSupplierForm" class="space-y-4"><div><label>الاسم</label><input id="supplierName" class="w-full p-2 border rounded" required></div><div><label>الهاتف</label><input id="supplierPhone" class="w-full p-2 border rounded"></div><div><label>العنوان</label><input id="supplierAddress" class="w-full p-2 border rounded"></div><button type="submit" class="w-full bg-purple-600 text-white p-3 rounded hover:bg-purple-700">إضافة</button></form></div></div>
         <div id="editPersonModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closeModal('editPersonModal')">×</span><h3 id="editPersonTitle" class="text-xl font-bold mb-4"></h3><form id="editPersonForm" class="space-y-4"><input type="hidden" id="editPersonId"><input type="hidden" id="editPersonType"><div><label>الاسم</label><input id="editPersonName" class="w-full p-2 border rounded" required></div><div><label>الهاتف</label><input id="editPersonPhone" class="w-full p-2 border rounded"></div><div><label>العنوان</label><input id="editPersonAddress" class="w-full p-2 border rounded"></div><button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded hover:bg-indigo-700">حفظ التعديلات</button></form></div></div>
@@ -1732,6 +1732,37 @@ const printContent = (elementId) => {
         function toggleNotifications() { const dropdown = document.getElementById('notification-dropdown'); dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none'; }
         const getMaintenanceCostForCar = (carId) => db.maintenanceLog.filter(m => m.carId === carId).reduce((sum, m) => sum + m.cost, 0);
 
+        function decorateActionButtons(){
+            try{
+                document.querySelectorAll('button[title]').forEach(btn=>{
+                    if(btn.dataset && btn.dataset.labeled === '1') return;
+                    const txt = (btn.textContent || '').trim();
+                    // لو الزر فيه نص (زي قبول ✓) سيبه
+                    if(txt.length > 0) return;
+
+                    const title = btn.getAttribute('title');
+                    if(!title) return;
+
+                    btn.dataset.labeled = '1';
+                    btn.style.display = 'flex';
+                    btn.style.flexDirection = 'column';
+                    btn.style.alignItems = 'center';
+                    btn.style.justifyContent = 'center';
+                    btn.style.gap = '4px';
+                    btn.style.lineHeight = '1';
+                    btn.style.padding = btn.style.padding || '2px 4px';
+
+                    const label = document.createElement('span');
+                    label.textContent = title;
+                    label.style.fontSize = '11px';
+                    label.style.opacity = '0.85';
+                    label.style.whiteSpace = 'nowrap';
+                    label.style.pointerEvents = 'none';
+                    btn.appendChild(label);
+                });
+            }catch(e){}
+        }
+
         const renderAll = (searchTerm = '') => { 
     const purchaseYear = document.getElementById('purchase-year-filter')?.value || 'all';
     const purchaseMonth = document.getElementById('purchase-month-filter')?.value || 'all';
@@ -1760,9 +1791,12 @@ const printContent = (elementId) => {
     // ERP modules
     if (typeof renderCustody === 'function') renderCustody();
     if (typeof renderMaintenance === 'function') renderMaintenance();
+    decorateActionButtons();
 };
 
 function renderVisibleTab(tabName){
+    // لإظهار مسميات أزرار الإجراءات مباشرة
+    setTimeout(decorateActionButtons, 0);
     const searchTerm = (document.getElementById('globalSearch')?.value || '').toLowerCase();
     const purchaseYear = document.getElementById('purchase-year-filter')?.value || 'all';
     const purchaseMonth = document.getElementById('purchase-month-filter')?.value || 'all';
@@ -3417,15 +3451,64 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 });
 
+        function populateMaintenanceCarSelect(selectedId = null, lock = false){
+            const sel = document.getElementById('maintenanceCarSelect');
+            if(!sel) return;
+            sel.innerHTML = '<option value="">اختر سيارة...</option>';
+            (db.cars||[]).forEach(c=>{
+                const label = `${c.carType||''} ${c.carModel||''} - ملف #${c.fileNumber || c.id}`;
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = label.trim();
+                sel.appendChild(opt);
+            });
+            if(selectedId){
+                sel.value = String(selectedId);
+            }else{
+                sel.value = '';
+            }
+            sel.disabled = !!lock;
+            // sync hidden + title box
+            const carIdVal = sel.value ? parseInt(sel.value) : (selectedId ? parseInt(selectedId) : NaN);
+            document.getElementById('maintenanceCarId').value = isNaN(carIdVal) ? '' : carIdVal;
+            const car = db.cars.find(c=>c.id===carIdVal);
+            const nameBox = document.getElementById('maintenanceCarName');
+            if(nameBox){
+                nameBox.textContent = car ? `${car.carType} ${car.carModel}` : (selectedId ? '' : 'اختر السيارة أولاً');
+                nameBox.style.background = car ? '#dbeafe' : '#fee2e2';
+            }
+        }
+
         function openAddMaintenanceModal(carId) {
             const car = db.cars.find(c => c.id === carId);
-            if (!car) return;
+            if (!car) return showToast('السيارة غير موجودة','error');
             document.getElementById('addMaintenanceForm').reset();
-            document.getElementById('maintenanceCarId').value = carId;
-            document.getElementById('maintenanceCarName').textContent = `${car.carType} ${car.carModel}`;
             document.getElementById('maintenanceDate').value = getTodayDate();
+            populateMaintenanceCarSelect(carId, true);
             openModal('addMaintenanceModal');
         }
+
+        function openAddMaintenanceFromMaintenanceTab(){
+            document.getElementById('addMaintenanceForm').reset();
+            document.getElementById('maintenanceDate').value = getTodayDate();
+            populateMaintenanceCarSelect(null, false);
+            openModal('addMaintenanceModal');
+        }
+
+        // عند تغيير السيارة من القائمة داخل نافذة الصيانة
+        document.addEventListener('change', function(ev){
+            const t = ev.target;
+            if(t && t.id === 'maintenanceCarSelect'){
+                const carIdVal = t.value ? parseInt(t.value) : NaN;
+                document.getElementById('maintenanceCarId').value = isNaN(carIdVal) ? '' : carIdVal;
+                const car = db.cars.find(c=>c.id===carIdVal);
+                const nameBox = document.getElementById('maintenanceCarName');
+                if(nameBox){
+                    nameBox.textContent = car ? `${car.carType} ${car.carModel}` : 'اختر السيارة أولاً';
+                    nameBox.style.background = car ? '#dbeafe' : '#fee2e2';
+                }
+            }
+        });
 
         function openAddQuoteModal(carId = null) {
             openModal('addQuoteModal');
@@ -3554,8 +3637,19 @@ document.addEventListener('DOMContentLoaded', () => {
         function setupMaintenanceFormListener() {
             document.getElementById('addMaintenanceForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-                const carId = parseInt(document.getElementById('maintenanceCarId').value);
+                let carId = parseInt(document.getElementById('maintenanceCarId').value);
+                if(!carId || isNaN(carId)){
+                    // fallback from select
+                    const sel = document.getElementById('maintenanceCarSelect');
+                    if(sel && sel.value) carId = parseInt(sel.value);
+                }
+                if(!carId || isNaN(carId)){
+                    return showToast('اختر السيارة أولاً','error');
+                }
                 const car = db.cars.find(c => c.id === carId);
+                if(!car){
+                    return showToast('السيارة غير موجودة','error');
+                }
                 const newLog = {
                     id: getNextId('maintenanceLog'),
                     carId: carId,
